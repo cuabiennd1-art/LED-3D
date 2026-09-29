@@ -19,6 +19,11 @@ import {
   FiMapPin,
   FiPhone,
   FiUser,
+  FiPackage,
+  FiExternalLink,
+  FiCopy,
+  FiRefreshCw,
+  FiAlertCircle,
 } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import { formatPrice } from '@/lib/utils';
@@ -122,6 +127,54 @@ export default function ShippingAdminPage() {
   const [isSimulating, setIsSimulating] = useState(false);
   const [simResult, setSimResult] = useState<any | null>(null);
 
+  // Viettel Post Live Test Push State
+  const [testPushTab, setTestPushTab] = useState<'mock' | 'order'>('mock');
+  const [testPushLoading, setTestPushLoading] = useState(false);
+  const [testCancelLoading, setTestCancelLoading] = useState(false);
+  const [testPushResult, setTestPushResult] = useState<any | null>(null);
+  const [showRawJson, setShowRawJson] = useState(false);
+  const [vtpInfo, setVtpInfo] = useState<{
+    connected: boolean;
+    username?: string;
+    inventories?: any[];
+    pendingOrders?: any[];
+  } | null>(null);
+
+  const [mockOrderForm, setMockOrderForm] = useState({
+    name: 'Nguyễn Văn Kiểm Thử',
+    phone: '0988776655',
+    address: 'Số 10 Dịch Vọng Hậu',
+    province: 'Hà Nội',
+    district: 'Quận Cầu Giấy',
+    ward: 'Phường Dịch Vọng Hậu',
+    productName: 'Áo Polo Nam Kiểm Thử VTP',
+    totalAmount: 150000,
+    codAmount: 150000,
+    weight: 500,
+    paymentMethod: 'cod',
+    orderService: 'STK',
+    autoCancel: true,
+  });
+
+  const [recipientWards, setRecipientWards] = useState<string[]>([]);
+  const [loadingRecipientWards, setLoadingRecipientWards] = useState(false);
+  const [selectedPendingOrderId, setSelectedPendingOrderId] = useState<string>('');
+
+  const loadVtpInfo = async () => {
+    try {
+      const res = await apiFetch('/api/shipping/test-push');
+      const data = await res.json();
+      if (data.success) {
+        setVtpInfo(data);
+        if (data.pendingOrders?.length > 0 && !selectedPendingOrderId) {
+          setSelectedPendingOrderId(data.pendingOrders[0]._id);
+        }
+      }
+    } catch (e) {
+      console.warn('Error loading VTP info:', e);
+    }
+  };
+
   // Load Shipping Config (API 8.3 GET)
   const loadConfig = async () => {
     try {
@@ -140,7 +193,35 @@ export default function ShippingAdminPage() {
 
   useEffect(() => {
     loadConfig();
+    loadVtpInfo();
   }, []);
+
+  // Fetch wards for test recipient whenever province or district changes
+  useEffect(() => {
+    const dist = mockOrderForm.district;
+    const prov = mockOrderForm.province;
+    if (!dist) {
+      setRecipientWards([]);
+      return;
+    }
+    let isMounted = true;
+    setLoadingRecipientWards(true);
+    fetch(`/api/locations/wards?district=${encodeURIComponent(dist)}&province=${encodeURIComponent(prov || '')}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (!isMounted) return;
+        if (data.success && Array.isArray(data.wards)) {
+          setRecipientWards(data.wards);
+        }
+      })
+      .catch((e) => console.error('Failed to load recipient wards:', e))
+      .finally(() => {
+        if (isMounted) setLoadingRecipientWards(false);
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, [mockOrderForm.province, mockOrderForm.district]);
 
   // Auto-fetch wards whenever warehouse district or province changes
   useEffect(() => {
@@ -254,6 +335,99 @@ export default function ShippingAdminPage() {
     }
   };
 
+  // Push Mock Order to Viettel Post
+  const handlePushMockOrder = async () => {
+    setTestPushLoading(true);
+    setTestPushResult(null);
+    try {
+      const res = await apiFetch('/api/shipping/test-push', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'push_mock',
+          mockData: mockOrderForm,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setTestPushResult(data.data);
+        toast.success(
+          data.message || `Đẩy đơn thành công! Mã vận đơn: ${data.data?.trackingCode}`,
+          { duration: 6000 }
+        );
+      } else {
+        toast.error(data.message || 'Lỗi khi đẩy đơn sang Viettel Post', { duration: 6000 });
+      }
+    } catch (err: any) {
+      toast.error('Lỗi kết nối máy chủ');
+    } finally {
+      setTestPushLoading(false);
+    }
+  };
+
+  // Push Existing Order to Viettel Post
+  const handlePushExistingOrder = async () => {
+    if (!selectedPendingOrderId) {
+      toast.error('Vui lòng chọn một đơn hàng để đẩy sang Viettel Post');
+      return;
+    }
+    setTestPushLoading(true);
+    setTestPushResult(null);
+    try {
+      const res = await apiFetch('/api/shipping/test-push', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'push_order',
+          orderId: selectedPendingOrderId,
+          weight: mockOrderForm.weight,
+          orderService: mockOrderForm.orderService,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setTestPushResult(data.data);
+        toast.success(data.message, { duration: 6000 });
+        loadVtpInfo();
+      } else {
+        toast.error(data.message || 'Lỗi khi đẩy đơn sang Viettel Post', { duration: 6000 });
+      }
+    } catch (err: any) {
+      toast.error('Lỗi kết nối máy chủ');
+    } finally {
+      setTestPushLoading(false);
+    }
+  };
+
+  // Cancel Viettel Post Order
+  const handleCancelTestOrder = async (trackingCode: string) => {
+    if (!trackingCode) return;
+    setTestCancelLoading(true);
+    try {
+      const res = await apiFetch('/api/shipping/test-push', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'cancel_order',
+          trackingCode,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success(data.message || 'Đã hủy vận đơn thành công trên Viettel Post!');
+        setTestPushResult((prev: any) =>
+          prev ? { ...prev, autoCancelled: true, cancelled: true } : prev
+        );
+      } else {
+        toast.error(data.message || 'Không thể hủy vận đơn');
+      }
+    } catch (err: any) {
+      toast.error('Lỗi gửi yêu cầu hủy vận đơn');
+    } finally {
+      setTestCancelLoading(false);
+    }
+  };
+
   // Calculate & Compare 3 Carriers (API 8.1 POST)
   const handleCalculateFee = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -318,6 +492,7 @@ export default function ShippingAdminPage() {
           shipping: 300,
           delivering: 500,
           delivered: 501,
+          cancelled: 107,
         };
         payload = {
           ORDER_REFERENCE: webhookSim.orderCode.trim().toUpperCase(),
@@ -1173,6 +1348,537 @@ export default function ShippingAdminPage() {
                 </div>
               )}
             </div>
+          </div>
+
+          {/* Section 3.5: Trung Tâm Kiểm Thử Đẩy Vận Đơn Viettel Post */}
+          <div className={styles.card} style={{ border: '2px solid #dc2626', background: 'rgba(220, 38, 38, 0.02)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
+              <h3 className={styles.cardTitle} style={{ margin: 0, color: '#ef4444' }}>
+                <FiSend style={{ color: '#ef4444' }} />
+                Trung Tâm Kiểm Thử Đẩy Vận Đơn Viettel Post (Live Order Dispatch)
+              </h3>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span
+                  style={{
+                    fontSize: 11,
+                    background: vtpInfo?.connected ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                    color: vtpInfo?.connected ? '#10b981' : '#ef4444',
+                    padding: '4px 10px',
+                    borderRadius: 20,
+                    fontWeight: 700,
+                    border: `1px solid ${vtpInfo?.connected ? '#10b981' : '#ef4444'}`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 5,
+                  }}
+                >
+                  <span style={{ width: 7, height: 7, borderRadius: '50%', background: vtpInfo?.connected ? '#10b981' : '#ef4444' }}></span>
+                  {vtpInfo?.connected ? 'Live API VTP: Sẵn Sàng Đẩy Đơn' : 'Chưa Kết Nối API Viettel Post'}
+                </span>
+                <button
+                  type="button"
+                  onClick={loadVtpInfo}
+                  className={styles.secondaryBtn}
+                  style={{ padding: '4px 8px', fontSize: 12, height: 28 }}
+                  title="Làm mới trạng thái Viettel Post"
+                >
+                  <FiRefreshCw /> Làm mới
+                </button>
+              </div>
+            </div>
+
+            <p style={{ fontSize: 13, color: 'var(--text-muted, #94a3b8)', marginBottom: 16 }}>
+              Công cụ kiểm thử đẩy đơn hàng thực tế sang hệ thống Viettel Post qua API <code>/v2/order/createOrder</code>, nhận mã vận đơn thật 12 số, tự động tính cước và hỗ trợ hủy đơn kiểm thử tức thì.
+            </p>
+
+            {/* Warehouse & Account Info Badge */}
+            {vtpInfo?.inventories && vtpInfo.inventories.length > 0 && (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: 10,
+                  padding: '12px 16px',
+                  backgroundColor: 'rgba(220, 38, 38, 0.06)',
+                  border: '1px solid rgba(220, 38, 38, 0.25)',
+                  borderRadius: 10,
+                  marginBottom: 20,
+                  fontSize: '0.85rem',
+                }}
+              >
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <div>
+                    <strong>Chủ tài khoản VTP:</strong> {vtpInfo.inventories[0].name} (SĐT: {vtpInfo.inventories[0].phone})
+                  </div>
+                  <div>
+                    <strong>Kho xuất hàng mặc định:</strong> {vtpInfo.inventories[0].address}
+                  </div>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <span style={{ fontSize: '0.75rem', background: '#dc2626', color: '#fff', padding: '3px 8px', borderRadius: 4, fontWeight: 600 }}>
+                    Mã kho VTP: {vtpInfo.inventories[0].groupaddressId}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Mode Switch Tabs */}
+            <div style={{ display: 'flex', gap: 10, marginBottom: 18 }}>
+              <button
+                type="button"
+                onClick={() => setTestPushTab('mock')}
+                style={{
+                  padding: '9px 16px',
+                  borderRadius: 8,
+                  fontWeight: 600,
+                  fontSize: '0.85rem',
+                  border: 'none',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 7,
+                  background: testPushTab === 'mock' ? '#dc2626' : 'rgba(255,255,255,0.06)',
+                  color: testPushTab === 'mock' ? '#ffffff' : 'var(--text-muted, #94a3b8)',
+                  transition: 'all 0.2s',
+                }}
+              >
+                <FiZap /> Đẩy Đơn Thử Nghiệm Tự Động (Mock Order)
+              </button>
+              <button
+                type="button"
+                onClick={() => setTestPushTab('order')}
+                style={{
+                  padding: '9px 16px',
+                  borderRadius: 8,
+                  fontWeight: 600,
+                  fontSize: '0.85rem',
+                  border: 'none',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 7,
+                  background: testPushTab === 'order' ? '#dc2626' : 'rgba(255,255,255,0.06)',
+                  color: testPushTab === 'order' ? '#ffffff' : 'var(--text-muted, #94a3b8)',
+                  transition: 'all 0.2s',
+                }}
+              >
+                <FiPackage /> Đẩy Đơn Thật Trong Shop ({vtpInfo?.pendingOrders?.length || 0} đơn chờ)
+              </button>
+            </div>
+
+            {/* TAB 1: MOCK ORDER */}
+            {testPushTab === 'mock' && (
+              <div>
+                <div className={styles.grid3}>
+                  <div className={styles.inputGroup}>
+                    <label>Tên người nhận hàng *</label>
+                    <input
+                      type="text"
+                      className={styles.input}
+                      value={mockOrderForm.name}
+                      onChange={(e) => setMockOrderForm({ ...mockOrderForm, name: e.target.value })}
+                    />
+                  </div>
+                  <div className={styles.inputGroup}>
+                    <label>Số điện thoại nhận hàng *</label>
+                    <input
+                      type="text"
+                      className={styles.input}
+                      value={mockOrderForm.phone}
+                      onChange={(e) => setMockOrderForm({ ...mockOrderForm, phone: e.target.value })}
+                    />
+                  </div>
+                  <div className={styles.inputGroup}>
+                    <label>Tên mặt hàng gửi</label>
+                    <input
+                      type="text"
+                      className={styles.input}
+                      value={mockOrderForm.productName}
+                      onChange={(e) => setMockOrderForm({ ...mockOrderForm, productName: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div className={styles.grid3} style={{ marginTop: 12 }}>
+                  <div className={styles.inputGroup}>
+                    <label>Tỉnh / Thành phố nhận *</label>
+                    <select
+                      className={styles.select}
+                      value={mockOrderForm.province}
+                      onChange={(e) => {
+                        const newProv = e.target.value;
+                        const pObj = vietnamProvinces.find((p) => p.name === newProv);
+                        const firstDist = pObj?.districts?.[0]?.name || '';
+                        setMockOrderForm({
+                          ...mockOrderForm,
+                          province: newProv,
+                          district: firstDist,
+                          ward: '',
+                        });
+                      }}
+                    >
+                      {vietnamProvinces.map((p) => (
+                        <option key={p.name} value={p.name}>
+                          {p.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className={styles.inputGroup}>
+                    <label>Quận / Huyện nhận *</label>
+                    {(() => {
+                      const curProvObj =
+                        vietnamProvinces.find((p) => p.name === mockOrderForm.province) || vietnamProvinces[0];
+                      return (
+                        <select
+                          className={styles.select}
+                          value={mockOrderForm.district}
+                          onChange={(e) =>
+                            setMockOrderForm({
+                              ...mockOrderForm,
+                              district: e.target.value,
+                              ward: '',
+                            })
+                          }
+                        >
+                          {curProvObj.districts.map((d) => (
+                            <option key={d.name} value={d.name}>
+                              {d.name}
+                            </option>
+                          ))}
+                        </select>
+                      );
+                    })()}
+                  </div>
+
+                  <div className={styles.inputGroup}>
+                    <label>Phường / Xã nhận *</label>
+                    <select
+                      className={styles.select}
+                      value={mockOrderForm.ward}
+                      disabled={loadingRecipientWards}
+                      onChange={(e) => setMockOrderForm({ ...mockOrderForm, ward: e.target.value })}
+                    >
+                      {loadingRecipientWards ? (
+                        <option value="">Đang tải danh sách phường/xã...</option>
+                      ) : recipientWards.length > 0 ? (
+                        <>
+                          <option value="">-- Chọn phường / xã --</option>
+                          {recipientWards.map((w) => (
+                            <option key={w} value={w}>
+                              {w}
+                            </option>
+                          ))}
+                        </>
+                      ) : (
+                        <option value={mockOrderForm.ward || 'Phường trung tâm'}>
+                          {mockOrderForm.ward || 'Phường trung tâm'}
+                        </option>
+                      )}
+                    </select>
+                  </div>
+                </div>
+
+                <div className={styles.grid3} style={{ marginTop: 12 }}>
+                  <div className={styles.inputGroup}>
+                    <label>Địa chỉ chi tiết (Số nhà, đường...)</label>
+                    <input
+                      type="text"
+                      className={styles.input}
+                      value={mockOrderForm.address}
+                      onChange={(e) => setMockOrderForm({ ...mockOrderForm, address: e.target.value })}
+                    />
+                  </div>
+
+                  <div className={styles.inputGroup}>
+                    <label>Tiền thu hộ COD (₫)</label>
+                    <input
+                      type="text"
+                      className={styles.input}
+                      value={formatWithDots(mockOrderForm.codAmount)}
+                      onChange={(e) =>
+                        setMockOrderForm({ ...mockOrderForm, codAmount: parseFromDots(e.target.value) })
+                      }
+                    />
+                  </div>
+
+                  <div className={styles.inputGroup}>
+                    <label>Dịch vụ Viettel Post</label>
+                    <select
+                      className={styles.select}
+                      value={mockOrderForm.orderService}
+                      onChange={(e) => setMockOrderForm({ ...mockOrderForm, orderService: e.target.value })}
+                    >
+                      <option value="STK">STK - Chuyển phát Tiêu Chuẩn</option>
+                      <option value="NCOD">NCOD - TMĐT Nhanh Thỏa Thuận</option>
+                      <option value="LCOD">LCOD - TMĐT Tiết Kiệm Thỏa Thuận</option>
+                      <option value="SCN">SCN - Chuyển phát Nhanh</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    flexWrap: 'wrap',
+                    gap: 14,
+                    marginTop: 18,
+                    padding: '12px 16px',
+                    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+                    borderRadius: 8,
+                    border: '1px solid var(--border-color, #232838)',
+                  }}
+                >
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontSize: '0.875rem' }}>
+                    <input
+                      type="checkbox"
+                      checked={mockOrderForm.autoCancel}
+                      onChange={(e) => setMockOrderForm({ ...mockOrderForm, autoCancel: e.target.checked })}
+                      style={{ width: 16, height: 16, cursor: 'pointer', accentColor: '#dc2626' }}
+                    />
+                    <span>
+                      <strong style={{ color: '#10b981' }}>Tự động gửi lệnh HỦY sau khi test thành công</strong>{' '}
+                      <span style={{ color: 'var(--text-muted, #94a3b8)' }}>
+                        (Khuyên dùng: Viettel Post sẽ cấp mã vận đơn thật và tính cước thật, sau đó hệ thống tự hủy đơn để không điều phối bưu tá)
+                      </span>
+                    </span>
+                  </label>
+
+                  <button
+                    type="button"
+                    onClick={handlePushMockOrder}
+                    disabled={testPushLoading}
+                    className={styles.saveBtn}
+                    style={{
+                      background: '#dc2626',
+                      borderColor: '#dc2626',
+                      padding: '10px 24px',
+                      fontSize: '0.9rem',
+                    }}
+                  >
+                    <FiSend /> {testPushLoading ? 'Đang đẩy đơn sang Viettel Post...' : '🚀 Đẩy Đơn Sang Viettel Post Ngay'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* TAB 2: PUSH EXISTING ORDER */}
+            {testPushTab === 'order' && (
+              <div>
+                {vtpInfo?.pendingOrders && vtpInfo.pendingOrders.length > 0 ? (
+                  <div>
+                    <div className={styles.grid2}>
+                      <div className={styles.inputGroup}>
+                        <label>Chọn đơn hàng cần đẩy sang Viettel Post</label>
+                        <select
+                          className={styles.select}
+                          value={selectedPendingOrderId}
+                          onChange={(e) => setSelectedPendingOrderId(e.target.value)}
+                        >
+                          {vtpInfo.pendingOrders.map((ord: any) => (
+                            <option key={ord._id} value={ord._id}>
+                              #{ord.orderCode} — {ord.customer?.name} ({ord.customer?.phone}) — {formatPrice(ord.totalAmount)} ({ord.status === 'pending' ? 'Chờ xác nhận' : 'Đã xác nhận'})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className={styles.inputGroup}>
+                        <label>Dịch vụ Viettel Post</label>
+                        <select
+                          className={styles.select}
+                          value={mockOrderForm.orderService}
+                          onChange={(e) => setMockOrderForm({ ...mockOrderForm, orderService: e.target.value })}
+                        >
+                          <option value="STK">STK - Chuyển phát Tiêu Chuẩn</option>
+                          <option value="NCOD">NCOD - TMĐT Nhanh Thỏa Thuận</option>
+                          <option value="LCOD">LCOD - TMĐT Tiết Kiệm Thỏa Thuận</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Selected Order Summary Card */}
+                    {(() => {
+                      const curOrd = vtpInfo.pendingOrders.find((o: any) => o._id === selectedPendingOrderId);
+                      if (!curOrd) return null;
+                      return (
+                        <div
+                          style={{
+                            marginTop: 14,
+                            padding: '14px 18px',
+                            background: 'rgba(255, 255, 255, 0.04)',
+                            borderRadius: 8,
+                            border: '1px solid var(--border-color, #232838)',
+                            fontSize: '0.875rem',
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                            gap: 10,
+                          }}
+                        >
+                          <div><strong>Khách hàng:</strong> {curOrd.customer?.name} ({curOrd.customer?.phone})</div>
+                          <div><strong>Địa chỉ:</strong> {curOrd.customer?.address || `${curOrd.customer?.ward}, ${curOrd.customer?.district}, ${curOrd.customer?.province}`}</div>
+                          <div><strong>Tổng tiền:</strong> {formatPrice(curOrd.totalAmount)} ({curOrd.paymentMethod === 'cod' ? 'Thu COD' : 'Chuyển khoản'})</div>
+                          <div><strong>Sản phẩm:</strong> {curOrd.items?.[0]?.name} {curOrd.items?.length > 1 ? `(+${curOrd.items.length - 1} món)` : ''}</div>
+                        </div>
+                      );
+                    })()}
+
+                    <div style={{ marginTop: 16, display: 'flex', justifyContent: 'flex-end' }}>
+                      <button
+                        type="button"
+                        onClick={handlePushExistingOrder}
+                        disabled={testPushLoading}
+                        className={styles.saveBtn}
+                        style={{
+                          background: '#dc2626',
+                          borderColor: '#dc2626',
+                          padding: '10px 24px',
+                          fontSize: '0.9rem',
+                        }}
+                      >
+                        <FiPackage /> {testPushLoading ? 'Đang tạo vận đơn Viettel Post...' : '📦 Bàn Giao & Đẩy Đơn Sang Viettel Post'}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ padding: 24, textAlign: 'center', color: 'var(--text-muted, #94a3b8)' }}>
+                    Không có đơn hàng nào ở trạng thái chờ gửi (pending/confirmed). Bạn có thể dùng tab <strong>"Đẩy Đơn Thử Nghiệm Tự Động"</strong> bên cạnh để kiểm tra.
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* LIVE RESULT CARD */}
+            {testPushResult && (
+              <div
+                style={{
+                  marginTop: 20,
+                  padding: '18px 20px',
+                  backgroundColor: 'rgba(16, 185, 129, 0.08)',
+                  border: '1.5px solid #10b981',
+                  borderRadius: 10,
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10, marginBottom: 14 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#10b981', fontWeight: 700, fontSize: '1.05rem' }}>
+                    <FiCheckCircle /> Đã Tạo Vận Đơn Viettel Post Thành Công!
+                  </div>
+                  {testPushResult.autoCancelled && (
+                    <span style={{ fontSize: '0.8rem', background: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', padding: '3px 10px', borderRadius: 20, fontWeight: 600 }}>
+                      ● Đã gửi lệnh tự động hủy theo yêu cầu
+                    </span>
+                  )}
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12, marginBottom: 16 }}>
+                  <div style={{ background: 'var(--bg-main, #090a0f)', padding: '10px 14px', borderRadius: 8 }}>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted, #94a3b8)' }}>MÃ VẬN ĐƠN VIETTEL POST</div>
+                    <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#3b82f6', letterSpacing: 1, marginTop: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
+                      {testPushResult.trackingCode}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText(testPushResult.trackingCode);
+                          toast.success('Đã copy mã vận đơn!');
+                        }}
+                        style={{ background: 'none', border: 'none', color: 'var(--text-muted, #94a3b8)', cursor: 'pointer', padding: 2 }}
+                        title="Copy mã vận đơn"
+                      >
+                        <FiCopy />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div style={{ background: 'var(--bg-main, #090a0f)', padding: '10px 14px', borderRadius: 8 }}>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted, #94a3b8)' }}>CƯỚC PHÍ VẬN CHUYỂN</div>
+                    <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#10b981', marginTop: 4 }}>
+                      {formatPrice(testPushResult.fee || 0)}
+                    </div>
+                  </div>
+
+                  <div style={{ background: 'var(--bg-main, #090a0f)', padding: '10px 14px', borderRadius: 8 }}>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted, #94a3b8)' }}>TIỀN THU HỘ COD</div>
+                    <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#f59e0b', marginTop: 4 }}>
+                      {formatPrice(testPushResult.moneyCollection || 0)}
+                    </div>
+                  </div>
+
+                  <div style={{ background: 'var(--bg-main, #090a0f)', padding: '10px 14px', borderRadius: 8 }}>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted, #94a3b8)' }}>MÃ ĐƠN HỆ THỐNG</div>
+                    <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-main, #fff)', marginTop: 4 }}>
+                      #{testPushResult.orderCode}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Action Buttons for Result */}
+                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    <a
+                      href={`https://viettelpost.com.vn/tra-cuu-hanh-trinh-don-hang?orderCode=${testPushResult.trackingCode}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={styles.secondaryBtn}
+                      style={{ padding: '8px 14px', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 6, textDecoration: 'none' }}
+                    >
+                      <FiExternalLink /> Tra cứu trên Viettel Post Portal
+                    </a>
+
+                    {!testPushResult.autoCancelled && !testPushResult.cancelled && (
+                      <button
+                        type="button"
+                        onClick={() => handleCancelTestOrder(testPushResult.trackingCode)}
+                        disabled={testCancelLoading}
+                        style={{
+                          padding: '8px 14px',
+                          fontSize: '0.85rem',
+                          background: 'rgba(239, 68, 68, 0.15)',
+                          color: '#ef4444',
+                          border: '1px solid #ef4444',
+                          borderRadius: 8,
+                          cursor: 'pointer',
+                          fontWeight: 600,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 6,
+                        }}
+                      >
+                        <FiX /> {testCancelLoading ? 'Đang hủy...' : 'Hủy Vận Đơn Này Trên Viettel Post'}
+                      </button>
+                    )}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowRawJson(!showRawJson)}
+                    style={{ background: 'none', border: 'none', color: 'var(--text-muted, #94a3b8)', fontSize: '0.8rem', cursor: 'pointer', textDecoration: 'underline' }}
+                  >
+                    {showRawJson ? 'Ẩn chi tiết API JSON' : 'Xem chi tiết phản hồi JSON từ Viettel Post'}
+                  </button>
+                </div>
+
+                {showRawJson && testPushResult.raw && (
+                  <pre
+                    style={{
+                      marginTop: 12,
+                      padding: 12,
+                      backgroundColor: 'var(--bg-main, #090a0f)',
+                      borderRadius: 6,
+                      fontSize: '0.75rem',
+                      overflowX: 'auto',
+                      color: '#a7f3d0',
+                    }}
+                  >
+                    {JSON.stringify(testPushResult.raw, null, 2)}
+                  </pre>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Section 4: Trung Tâm Kiểm Thử Webhook Vận Chuyển 3rd-Party */}

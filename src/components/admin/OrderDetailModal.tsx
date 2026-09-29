@@ -68,17 +68,35 @@ export default function OrderDetailModal({
       return;
     }
 
+    if (status === 'cancelled') {
+      const confirmMsg = order?.trackingCode
+        ? `Bạn có chắc chắn muốn hủy đơn hàng #${order.orderCode}?\nVận đơn ${order.trackingCode} bên ${order.shippingCarrier || 'hãng vận chuyển'} cũng sẽ được hủy tự động.`
+        : `Bạn có chắc chắn muốn hủy đơn hàng #${order?.orderCode}?`;
+      if (!window.confirm(confirmMsg)) {
+        return;
+      }
+    }
+
     setIsUpdating(true);
     try {
+      const payload: any = { status };
+      if (status === 'delivered' && order?.paymentMethod === 'cod') {
+        payload.paymentStatus = 'paid';
+      }
+
       const res = await apiFetch(`/api/orders/${orderId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status }),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
       if (data.success) {
-        toast.success(`Đã cập nhật trạng thái đơn thành công!`);
-        setOrder({ ...order, status });
+        toast.success(data.message || `Đã cập nhật trạng thái đơn thành công!`);
+        setOrder({
+          ...order,
+          status,
+          ...(payload.paymentStatus ? { paymentStatus: payload.paymentStatus } : {}),
+        });
         onSuccess();
       } else {
         toast.error(data.message || 'Lỗi cập nhật');

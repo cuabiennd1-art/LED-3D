@@ -142,6 +142,10 @@ export async function POST(request: Request) {
       } else if ([502, 504, 505].includes(vtpStatus)) {
         unifiedStatus = 'returned';
         description = description || 'Giao hàng không thành công, bưu cục giữ chờ phát lại hoặc chuyển hoàn';
+      } else if ([107, 201, 507].includes(vtpStatus)) {
+        unifiedStatus = 'cancelled';
+        stepNumber = 0;
+        description = description || 'Đơn hàng đã được hủy trên hệ thống Viettel Post';
       }
     }
     // 4. Direct / Generic Simulation Payload

@@ -70,7 +70,7 @@ export async function POST(request: Request) {
     const updated = await Setting.findOneAndUpdate(
       { key: 'shipping_config' },
       { value: payload },
-      { upsert: true, new: true }
+      { upsert: true, returnDocument: 'after' }
     );
 
     return NextResponse.json({

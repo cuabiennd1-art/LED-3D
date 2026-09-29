@@ -5,7 +5,7 @@ import Product from '@/models/Product';
 import { checkOrderLowStock, deductOrderInventory, restoreOrderInventory } from '@/lib/inventory-helper';
 import { createGHNOrder, cancelGHNOrder } from '@/lib/shipping/ghn';
 import { createGHTKOrder, cancelGHTKOrder } from '@/lib/shipping/ghtk';
-import { createViettelPostOrder } from '@/lib/shipping/viettelpost';
+import { createViettelPostOrder, cancelViettelPostOrder } from '@/lib/shipping/viettelpost';
 
 export async function GET(
   request: Request,
@@ -139,17 +139,48 @@ export async function PUT(
     }
 
     // TỰ ĐỘNG HỦY VẬN ĐƠN PHÍA HÃNG KHI ADMIN HỦY ĐƠN (CANCELLED)
+    let cancelShippingResult: { success: boolean; message: string } | null = null;
     if (newStatus === 'cancelled') {
       order.shippingStatus = 'cancelled';
       if (order.trackingCode) {
         try {
           if ((order.shippingProvider || '').includes('ghtk') || (order.shippingCarrier || '').includes('GHTK')) {
-            await cancelGHTKOrder(order.trackingCode);
+            cancelShippingResult = await cancelGHTKOrder(order.trackingCode);
           } else if ((order.shippingProvider || '').includes('ghn') || (order.shippingCarrier || '').includes('GHN')) {
-            await cancelGHNOrder(order.trackingCode);
+            cancelShippingResult = await cancelGHNOrder(order.trackingCode);
+          } else if (
+            (order.shippingProvider || '').toLowerCase().includes('viettel') ||
+            (order.shippingCarrier || '').toLowerCase().includes('viettel') ||
+            (order.trackingCode || '').startsWith('VTP') ||
+            /^\d{11,13}$/.test(order.trackingCode || '')
+          ) {
+            cancelShippingResult = await cancelViettelPostOrder(order.trackingCode);
+          }
+
+          if (cancelShippingResult) {
+            if (!order.shippingLogs) order.shippingLogs = [];
+            order.shippingLogs.push({
+              time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+              status: cancelShippingResult.success ? 'Hủy vận đơn thành công' : 'Yêu cầu hủy vận đơn thất bại',
+              location: 'Hệ thống vận chuyển',
+              description: cancelShippingResult.success
+                ? `Đã gửi lệnh hủy vận đơn sang ${order.shippingCarrier || 'Viettel Post'} thành công (Mã vận đơn: ${order.trackingCode}). Phản hồi: ${cancelShippingResult.message}`
+                : `Hãng vận chuyển ${order.shippingCarrier || 'Viettel Post'} từ chối hủy hoặc có lỗi: ${cancelShippingResult.message}`,
+              carrier: order.shippingCarrier || order.shippingProvider,
+              createdAt: new Date(),
+            });
           }
         } catch (err: any) {
           console.error('Lỗi khi gửi yêu cầu hủy vận đơn sang hãng:', err.message);
+          if (!order.shippingLogs) order.shippingLogs = [];
+          order.shippingLogs.push({
+            time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+            status: 'Lỗi hủy vận đơn',
+            location: 'Hệ thống vận chuyển',
+            description: `Không thể kết nối tới ${order.shippingCarrier || 'hãng'} để hủy mã ${order.trackingCode}: ${err.message}`,
+            carrier: order.shippingCarrier || order.shippingProvider,
+            createdAt: new Date(),
+          });
         }
       }
     }
@@ -191,7 +222,15 @@ export async function PUT(
 
     let responseMessage = 'Cập nhật trạng thái đơn hàng thành công';
     if (newStatus === 'cancelled') {
-      responseMessage = `Đã hủy đơn hàng #${order.orderCode} thành công${order.trackingCode ? ` và gửi lệnh hủy sang ${order.shippingCarrier}` : ''}!`;
+      if (cancelShippingResult) {
+        if (cancelShippingResult.success) {
+          responseMessage = `Đã hủy đơn hàng #${order.orderCode} và hủy thành công vận đơn ${order.trackingCode} bên ${order.shippingCarrier || 'hãng vận chuyển'}!`;
+        } else {
+          responseMessage = `Đã chuyển đơn hàng #${order.orderCode} sang Đã Hủy, nhưng hãng ${order.shippingCarrier || 'Viettel Post'} báo: "${cancelShippingResult.message}". Vui lòng kiểm tra lại bưu cục!`;
+        }
+      } else {
+        responseMessage = `Đã hủy đơn hàng #${order.orderCode} thành công!`;
+      }
     } else if (newStatus === 'shipping' || newStatus === 'delivering') {
       responseMessage = order.trackingCode
         ? `Đã chuyển sang Đang Giao Hàng và đẩy vận đơn sang ${order.shippingCarrier || 'hãng vận chuyển'} (Mã vận đơn: ${order.trackingCode})!`
@@ -242,6 +281,13 @@ export async function DELETE(
           await cancelGHTKOrder(orderToDelete.trackingCode);
         } else if ((orderToDelete.shippingProvider || '').includes('ghn') || (orderToDelete.shippingCarrier || '').includes('GHN')) {
           await cancelGHNOrder(orderToDelete.trackingCode);
+        } else if (
+          (orderToDelete.shippingProvider || '').toLowerCase().includes('viettel') ||
+          (orderToDelete.shippingCarrier || '').toLowerCase().includes('viettel') ||
+          (orderToDelete.trackingCode || '').startsWith('VTP') ||
+          /^\d{11,13}$/.test(orderToDelete.trackingCode || '')
+        ) {
+          await cancelViettelPostOrder(orderToDelete.trackingCode);
         }
       } catch (err: any) {
         console.error('Lỗi khi gửi lệnh hủy vận đơn khi xóa đơn:', err.message);
@@ -252,7 +298,7 @@ export async function DELETE(
 
     return NextResponse.json({
       success: true,
-      message: `Đã xóa đơn hàng #${orderToDelete.orderCode} thành công${orderToDelete.trackingCode ? ` và gửi lệnh hủy sang ${orderToDelete.shippingCarrier}` : ''}!`,
+      message: `Đã xóa đơn hàng #${orderToDelete.orderCode} thành công${orderToDelete.trackingCode ? ` và gửi lệnh hủy sang ${orderToDelete.shippingCarrier || 'hãng vận chuyển'}` : ''}!`,
     });
   } catch (error: any) {
     return NextResponse.json(

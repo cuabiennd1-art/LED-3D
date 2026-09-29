@@ -132,17 +132,68 @@ export async function POST(request: Request) {
       if (!activeToken) {
         return NextResponse.json(
           {
-            success: true,
-            warning: true,
-            message: '⚠️ Viettel Post chưa điền Secret Token. Đang sử dụng tài khoản liên kết mặc định.',
-          }
+            success: false,
+            message: 'Vui lòng nhập Token Secret Viettel Post để kiểm tra.',
+          },
+          { status: 400 }
         );
       }
 
-      return NextResponse.json({
-        success: true,
-        message: '✓ Cấu hình Viettel Post đã được ghi nhận!',
-      });
+      try {
+        const loginRes = await fetch('https://partner.viettelpost.vn/v2/user/LoginVTP', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: String(activeToken).trim() }),
+        });
+        const loginData = await loginRes.json().catch(() => null);
+
+        if (loginData?.status === 200 && loginData?.data?.token) {
+          const jwt = loginData.data.token;
+          const phone = loginData.data.phone || '';
+
+          // Lấy thông tin kho hàng thực tế của tài khoản
+          let ownerName = 'Khách hàng Viettel Post';
+          let address = '';
+          try {
+            const invRes = await fetch('https://partner.viettelpost.vn/v2/user/listInventory', {
+              headers: { Token: jwt },
+            });
+            const invData = await invRes.json().catch(() => null);
+            if (Array.isArray(invData?.data) && invData.data.length > 0) {
+              const primary = invData.data[0];
+              ownerName = primary.name || ownerName;
+              address = primary.address || '';
+            }
+          } catch (e) {}
+
+          return NextResponse.json({
+            success: true,
+            message: `✓ Kết nối Viettel Post thành công! Chủ tài khoản: "${ownerName}" (SĐT: ${phone})${address ? ` - Kho: "${address}"` : ''}`,
+            data: {
+              carrier: 'Viettel Post',
+              phone,
+              ownerName,
+              address,
+            },
+          });
+        } else {
+          return NextResponse.json(
+            {
+              success: false,
+              message: `Kết nối Viettel Post thất bại: ${loginData?.message || 'Token không hợp lệ hoặc đã hết hạn.'}`,
+            },
+            { status: 400 }
+          );
+        }
+      } catch (err: any) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: `Lỗi kết nối Viettel Post: ${err.message}`,
+          },
+          { status: 500 }
+        );
+      }
     }
 
     // 4. TEST TẤT CẢ (PING 3 HÃNG)

@@ -78,7 +78,12 @@ export async function getUnifiedOrderTracking(query: {
   if (effectiveCarrier.includes('ghn') || effectiveTrackingCode.startsWith('GHN')) {
     carrierCode = 'ghn';
     carrierName = 'Giao Hàng Nhanh (GHN)';
-  } else if (effectiveCarrier.includes('viettel') || effectiveTrackingCode.startsWith('VTP')) {
+  } else if (
+    effectiveCarrier.includes('viettel') ||
+    effectiveCarrier.includes('vtp') ||
+    effectiveTrackingCode.startsWith('VTP') ||
+    /^\d{11,13}$/.test(effectiveTrackingCode)
+  ) {
     carrierCode = 'viettelpost';
     carrierName = 'Viettel Post';
   } else if (effectiveCarrier.includes('standard') || effectiveCarrier.includes('tiêu chuẩn')) {
@@ -102,6 +107,48 @@ export async function getUnifiedOrderTracking(query: {
 
   // If live data returned with valid logs
   if (liveData && liveData.success && liveData.logs && liveData.logs.length > 0) {
+    const isVtpCancelled = liveData.orderStatus === 107 || liveData.status_id === 107;
+    const isVtpDelivered = liveData.orderStatus === 106 || liveData.orderStatus === 501;
+
+    // Automatically synchronize DB order status if carrier reports delivered or cancelled
+    if (order) {
+      let shouldSave = false;
+      if (isVtpDelivered && order.status !== 'delivered') {
+        order.status = 'delivered';
+        order.shippingStatus = 'delivered';
+        if (order.paymentMethod === 'cod') {
+          order.paymentStatus = 'paid';
+        }
+        if (!order.shippingLogs) order.shippingLogs = [];
+        order.shippingLogs.push({
+          time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+          status: 'Đã giao thành công',
+          location: 'Bưu cục Viettel Post',
+          description: `Hãng vận chuyển Viettel Post xác nhận đã giao hàng thành công tới người nhận (Mã trạng thái: ${liveData.orderStatus}).`,
+          carrier: 'Viettel Post',
+          createdAt: new Date(),
+        });
+        shouldSave = true;
+      } else if (isVtpCancelled && order.status !== 'cancelled') {
+        order.status = 'cancelled';
+        order.shippingStatus = 'cancelled';
+        if (!order.shippingLogs) order.shippingLogs = [];
+        order.shippingLogs.push({
+          time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+          status: 'Hủy đơn hàng',
+          location: 'Hệ thống Viettel Post',
+          description: `Đơn hàng đã được hủy trên hệ thống Viettel Post (Mã trạng thái: 107).`,
+          carrier: 'Viettel Post',
+          createdAt: new Date(),
+        });
+        shouldSave = true;
+      }
+
+      if (shouldSave) {
+        order.save().catch((err: any) => console.error('Lỗi tự động lưu đơn từ Live Tracking:', err.message));
+      }
+    }
+
     const timeline: TrackingStep[] = liveData.logs.map((log: any, index: number) => {
       const loc = log.location || log.warehouse || 'Bưu cục trung chuyển';
       const coords = resolveCoordinates(loc, order?.customer?.province, order?.customer?.district);
@@ -115,7 +162,8 @@ export async function getUnifiedOrderTracking(query: {
       };
     });
 
-    const routePoints: RoutePoint[] = buildRoutePointsFromTimeline(timeline, order?.customer, carrierName, order?.status || 'shipping');
+    const effectiveStatus = isVtpCancelled ? 'cancelled' : isVtpDelivered ? 'delivered' : (order?.status || 'shipping');
+    const routePoints: RoutePoint[] = buildRoutePointsFromTimeline(timeline, order?.customer, carrierName, effectiveStatus);
 
     return {
       success: true,
@@ -123,9 +171,9 @@ export async function getUnifiedOrderTracking(query: {
       trackingCode: effectiveTrackingCode,
       carrierName,
       carrierCode,
-      currentStatus: liveData.status || order?.status || 'shipping',
-      statusText: liveData.statusText || mapStatusToText(order?.status || 'shipping'),
-      statusCode: order?.status || 'shipping',
+      currentStatus: effectiveStatus,
+      statusText: liveData.statusName || liveData.statusText || (isVtpCancelled ? 'Đã hủy đơn hàng' : isVtpDelivered ? 'Đã giao thành công' : mapStatusToText(effectiveStatus)),
+      statusCode: effectiveStatus,
       isLive: true,
       customerInfo: order?.customer ? {
         name: order.customer.name,

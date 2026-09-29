@@ -17,6 +17,9 @@ import {
   FiCheckSquare,
   FiSquare,
   FiFileText,
+  FiCheckCircle,
+  FiXCircle,
+  FiRefreshCw,
 } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import { formatPrice, formatDate } from '@/lib/utils';
@@ -24,6 +27,8 @@ import { formatVariantDisplay } from '@/lib/variant-helper';
 import Skeleton from '@/components/common/Skeleton';
 import OrderDetailModal from '@/components/admin/OrderDetailModal';
 import DeleteConfirmModal from '@/components/admin/DeleteConfirmModal';
+import CancelOrderConfirmModal from '@/components/admin/CancelOrderConfirmModal';
+import DeliverConfirmModal from '@/components/admin/DeliverConfirmModal';
 import ShipOrderModal from '@/components/admin/ShipOrderModal';
 import OrderPackingSlipModal from '@/components/admin/OrderPackingSlipModal';
 import LowStockWarningModal, { ILowStockItem } from '@/components/admin/LowStockWarningModal';
@@ -52,6 +57,25 @@ export default function OrdersPage() {
   const [shippingTargetOrder, setShippingTargetOrder] = useState<any | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; code: string } | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Cancel Order Modal state
+  const [cancelTarget, setCancelTarget] = useState<{
+    id: string;
+    code: string;
+    trackingCode?: string;
+    carrier?: string;
+  } | null>(null);
+  const [isCancelling, setIsCancelling] = useState(false);
+
+  // Deliver Confirm Modal state
+  const [deliverTarget, setDeliverTarget] = useState<{
+    id: string;
+    code: string;
+    isCod?: boolean;
+    totalAmount?: number;
+  } | null>(null);
+  const [isConfirmingDelivery, setIsConfirmingDelivery] = useState(false);
+  const [isSyncingVTP, setIsSyncingVTP] = useState(false);
 
   // Low Stock Warning Modal state
   const [lowStockWarningData, setLowStockWarningData] = useState<{
@@ -248,6 +272,78 @@ export default function OrdersPage() {
     }
   };
 
+  // Cancel Order with 3rd-party carrier sync (Viettel Post, GHN, GHTK)
+  const handleConfirmCancel = async (reason: string) => {
+    if (!cancelTarget) return;
+    setIsCancelling(true);
+    try {
+      const res = await apiFetch(`/api/orders/${cancelTarget.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'cancelled', notes: reason }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success(data.message || `Đã hủy đơn hàng #${cancelTarget.code} thành công!`);
+        setCancelTarget(null);
+        fetchOrders();
+      } else {
+        toast.error(data.message || 'Lỗi hủy đơn hàng');
+      }
+    } catch (err) {
+      toast.error('Lỗi kết nối máy chủ');
+    } finally {
+      setIsCancelling(false);
+    }
+  };
+
+  // Deliver Order confirmation (Xác nhận đã giao hàng thành công)
+  const handleConfirmDeliver = async () => {
+    if (!deliverTarget) return;
+    setIsConfirmingDelivery(true);
+    try {
+      const res = await apiFetch(`/api/orders/${deliverTarget.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: 'delivered',
+          ...(deliverTarget.isCod ? { paymentStatus: 'paid' } : {}),
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success(data.message || `Đã xác nhận đơn hàng #${deliverTarget.code} giao thành công!`);
+        setDeliverTarget(null);
+        fetchOrders();
+      } else {
+        toast.error(data.message || 'Lỗi cập nhật giao hàng');
+      }
+    } catch (err) {
+      toast.error('Lỗi kết nối máy chủ');
+    } finally {
+      setIsConfirmingDelivery(false);
+    }
+  };
+
+  // Sync active orders with Viettel Post live API
+  const handleSyncVTP = async () => {
+    setIsSyncingVTP(true);
+    try {
+      const res = await apiFetch('/api/shipping/sync-vtp', { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        toast.success(data.message);
+        fetchOrders();
+      } else {
+        toast.error(data.message || 'Lỗi đồng bộ Viettel Post');
+      }
+    } catch (err) {
+      toast.error('Lỗi kết nối máy chủ khi đồng bộ');
+    } finally {
+      setIsSyncingVTP(false);
+    }
+  };
+
   // Delete Order (API 5.3 DELETE)
   const handleConfirmDelete = async () => {
     if (!deleteTarget) return;
@@ -364,6 +460,23 @@ export default function OrdersPage() {
           >
             <FiRotateCcw className={isResetting ? styles.spinning : ''} />
             <span>{isResetting ? 'Đang làm mới...' : 'Đặt lại bộ lọc'}</span>
+          </button>
+
+          {/* Sync with Viettel Post Button */}
+          <button
+            type="button"
+            className={styles.btnReset}
+            style={{
+              background: 'rgba(234, 88, 12, 0.1)',
+              borderColor: 'rgba(234, 88, 12, 0.3)',
+              color: '#ea580c',
+            }}
+            onClick={handleSyncVTP}
+            disabled={isSyncingVTP}
+            title="Đồng bộ trạng thái giao hàng từ Viettel Post"
+          >
+            <FiRefreshCw className={isSyncingVTP ? 'animate-spin' : ''} />
+            <span>{isSyncingVTP ? 'Đang đồng bộ...' : 'Đồng bộ VTP'}</span>
           </button>
         </div>
 
@@ -561,61 +674,71 @@ export default function OrdersPage() {
                             </button>
 
                             {/* Status transitions */}
+                            {/* 1. XÁC NHẬN ĐƠN: Chỉ hiển thị khi đơn ở trạng thái "Chờ duyệt" (pending) */}
                             {o.status === 'pending' && (
-                              <>
-                                <button
-                                  type="button"
-                                  className={styles.actionBtn}
-                                  title="Duyệt đơn hàng"
-                                  style={{ color: '#10b981' }}
-                                  onClick={() => handleUpdateStatus(o._id, 'confirmed', false, o.orderCode)}
-                                >
-                                  <FiCheck />
-                                </button>
-                                <button
-                                  type="button"
-                                  className={styles.actionBtn}
-                                  title="Chọn đơn vị giao hàng"
-                                  style={{ color: '#ea580c' }}
-                                  onClick={() => setShippingTargetOrder(o)}
-                                >
-                                  <FiTruck />
-                                </button>
-                              </>
+                              <button
+                                type="button"
+                                className={styles.actionBtn}
+                                title="Xác nhận & duyệt đơn hàng"
+                                style={{ color: '#10b981', background: 'rgba(16, 185, 129, 0.12)' }}
+                                onClick={() => handleUpdateStatus(o._id, 'confirmed', false, o.orderCode)}
+                              >
+                                <FiCheck />
+                              </button>
                             )}
 
+                            {/* 2. GIAO HÀNG (ĐẨY SANG HÃNG): Chỉ hiển thị sau khi ĐÃ XÁC NHẬN (confirmed) */}
                             {o.status === 'confirmed' && (
                               <button
                                 type="button"
                                 className={styles.actionBtn}
-                                title="Chọn đơn vị giao hàng"
-                                style={{ color: 'var(--primary, #3b82f6)' }}
+                                title="Giao hàng (Đẩy sang hãng vận chuyển Viettel Post/GHN/GHTK)"
+                                style={{ color: '#ea580c', background: 'rgba(234, 88, 12, 0.12)' }}
                                 onClick={() => setShippingTargetOrder(o)}
                               >
                                 <FiTruck />
                               </button>
                             )}
 
-                            {o.status === 'shipping' && (
+                            {/* 3. XÁC NHẬN ĐÃ GIAO HÀNG THÀNH CÔNG: Chỉ hiển thị khi đơn đang giao (shipping / delivering) */}
+                            {(o.status === 'shipping' || o.status === 'delivering') && (
                               <button
                                 type="button"
                                 className={styles.actionBtn}
-                                title="Hoàn thành giao hàng"
-                                style={{ color: '#10b981' }}
-                                onClick={() => handleUpdateStatus(o._id, 'delivered')}
+                                title="Xác nhận đã giao hàng thành công"
+                                style={{ color: '#10b981', background: 'rgba(16, 185, 129, 0.12)' }}
+                                onClick={() =>
+                                  setDeliverTarget({
+                                    id: o._id,
+                                    code: o.orderCode,
+                                    isCod: o.paymentMethod === 'cod',
+                                    totalAmount: o.totalAmount,
+                                  })
+                                }
                               >
-                                <FiCheck />
+                                <FiCheckCircle />
                               </button>
                             )}
 
-                            <button
-                              type="button"
-                              className={`${styles.actionBtn} ${styles.dangerBtn}`}
-                              onClick={() => setDeleteTarget({ id: o._id, code: o.orderCode })}
-                              title="Xóa đơn hàng"
-                            >
-                              <FiTrash2 />
-                            </button>
+                            {/* 4. HỦY ĐƠN HÀNG: Thay thế nút xóa đơn hàng, tự động hủy cả bên đối tác thứ 3 */}
+                            {o.status !== 'cancelled' && o.status !== 'delivered' && (
+                              <button
+                                type="button"
+                                className={`${styles.actionBtn} ${styles.dangerBtn}`}
+                                onClick={() =>
+                                  setCancelTarget({
+                                    id: o._id,
+                                    code: o.orderCode,
+                                    trackingCode: o.trackingCode,
+                                    carrier: o.shippingCarrier || o.shippingProvider,
+                                  })
+                                }
+                                title="Hủy đơn hàng (Hủy cả bên vận chuyển thứ 3)"
+                                style={{ color: '#ef4444', background: 'rgba(239, 68, 68, 0.12)' }}
+                              >
+                                <FiXCircle />
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -712,16 +835,28 @@ export default function OrdersPage() {
         />
       )}
 
-      {/* Delete Confirm Modal (API 5.3) */}
-      <DeleteConfirmModal
-        isOpen={!!deleteTarget}
-        title="Xác Nhận Xóa Đơn Hàng"
-        message="Hành động này sẽ xóa hoàn toàn đơn hàng khỏi hệ thống và không thể khôi phục."
-        itemTitle={`Đơn hàng #${deleteTarget?.code}`}
-        isDeleting={isDeleting}
-        onConfirm={handleConfirmDelete}
-        onClose={() => setDeleteTarget(null)}
+      {/* Cancel Order Confirm Modal (Thay thế DeleteConfirmModal, hủy cả bên vận chuyển thứ 3) */}
+      <CancelOrderConfirmModal
+        isOpen={!!cancelTarget}
+        orderCode={cancelTarget?.code || ''}
+        trackingCode={cancelTarget?.trackingCode}
+        carrier={cancelTarget?.carrier}
+        isCancelling={isCancelling}
+        onConfirm={handleConfirmCancel}
+        onClose={() => setCancelTarget(null)}
       />
+
+      {/* Deliver Confirm Modal */}
+      <DeliverConfirmModal
+        isOpen={!!deliverTarget}
+        orderCode={deliverTarget?.code || ''}
+        isCod={deliverTarget?.isCod}
+        totalAmount={deliverTarget?.totalAmount}
+        isConfirming={isConfirmingDelivery}
+        onConfirm={handleConfirmDeliver}
+        onClose={() => setDeliverTarget(null)}
+      />
+
       {/* Low Stock Warning Modal */}
       {lowStockWarningData && (
         <LowStockWarningModal

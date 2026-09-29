@@ -72,7 +72,7 @@ export async function POST(request: Request) {
     const setting = await Setting.findOneAndUpdate(
       { key: 'payment_config' },
       { $set: { value: updatedConfig } },
-      { upsert: true, new: true, setDefaultsOnInsert: true }
+      { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true }
     );
 
     return NextResponse.json({

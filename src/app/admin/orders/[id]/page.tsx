@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { FiArrowLeft, FiCheck, FiTruck, FiUser, FiMapPin, FiPackage, FiX, FiDollarSign, FiPrinter } from 'react-icons/fi';
+import { FiArrowLeft, FiCheck, FiTruck, FiUser, FiMapPin, FiPackage, FiX, FiDollarSign, FiPrinter, FiCheckCircle, FiXCircle } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import { formatPrice, formatDate } from '@/lib/utils';
 import { formatVariantDisplay } from '@/lib/variant-helper';
@@ -11,6 +11,8 @@ import AdminLoading from '@/components/admin/AdminLoading';
 import OrderTrackingTimeline from '@/components/store/OrderTrackingTimeline';
 import ShipOrderModal from '@/components/admin/ShipOrderModal';
 import OrderPackingSlipModal from '@/components/admin/OrderPackingSlipModal';
+import CancelOrderConfirmModal from '@/components/admin/CancelOrderConfirmModal';
+import DeliverConfirmModal from '@/components/admin/DeliverConfirmModal';
 import LowStockWarningModal, { ILowStockItem } from '@/components/admin/LowStockWarningModal';
 import { apiFetch } from '@/lib/api';
 import styles from './page.module.css';
@@ -24,6 +26,10 @@ export default function OrderDetailPage() {
   const [updating, setUpdating] = useState(false);
   const [isShipModalOpen, setIsShipModalOpen] = useState(false);
   const [isSlipModalOpen, setIsSlipModalOpen] = useState(false);
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+  const [isDeliverModalOpen, setIsDeliverModalOpen] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
+  const [isDelivering, setIsDelivering] = useState(false);
 
   // Low Stock Warning Modal
   const [lowStockWarningData, setLowStockWarningData] = useState<{
@@ -54,11 +60,17 @@ export default function OrderDetailPage() {
     if (id) fetchOrder();
   }, [id]);
 
-  const updateOrderStatus = async (status: string, paymentStatus?: string, forceConfirm: boolean = false) => {
+  const updateOrderStatus = async (
+    status: string,
+    paymentStatus?: string,
+    forceConfirm: boolean = false,
+    notes?: string
+  ) => {
     setUpdating(true);
     try {
       const payload: any = { status, forceConfirm };
       if (paymentStatus) payload.paymentStatus = paymentStatus;
+      if (notes) payload.notes = notes;
 
       const res = await apiFetch(`/api/orders/${id}`, {
         method: 'PUT',
@@ -138,62 +150,53 @@ export default function OrderDetailPage() {
             <FiPrinter /> In Phiếu Đóng Hàng (A6)
           </button>
 
+          {/* Hủy đơn hàng (Hủy cả bên vận chuyển thứ 3) */}
           {order.status !== 'cancelled' && order.status !== 'delivered' && (
             <button
               className={styles.btnDanger}
-              onClick={() => updateOrderStatus('cancelled')}
+              onClick={() => setIsCancelModalOpen(true)}
               disabled={updating}
+              title="Hủy đơn hàng và hủy cả bên vận chuyển thứ 3"
             >
-              <FiX /> Hủy đơn
+              <FiXCircle /> Hủy Đơn Hàng
             </button>
           )}
 
-          {/* Pending: Duyệt đơn hoặc Chọn đơn vị giao hàng */}
+          {/* 1. Chờ duyệt (pending): Chỉ hiển thị nút Duyệt đơn */}
           {order.status === 'pending' && (
-            <>
-              <button
-                type="button"
-                className={styles.btnPrimary}
-                style={{ background: '#10b981' }}
-                onClick={() => updateOrderStatus('confirmed')}
-                disabled={updating}
-              >
-                <FiCheck /> Duyệt Đơn
-              </button>
-              <button
-                type="button"
-                className={styles.btnPrimary}
-                style={{ background: '#ea580c' }}
-                onClick={() => setIsShipModalOpen(true)}
-                disabled={updating}
-              >
-                <FiTruck /> Chọn Đơn Vị Giao Hàng
-              </button>
-            </>
+            <button
+              type="button"
+              className={styles.btnPrimary}
+              style={{ background: '#10b981' }}
+              onClick={() => updateOrderStatus('confirmed')}
+              disabled={updating}
+            >
+              <FiCheck /> Duyệt Đơn
+            </button>
           )}
 
-          {/* Confirmed: Chọn đơn vị giao hàng & Đẩy đơn */}
+          {/* 2. Đã xác nhận (confirmed): Hiển thị nút Giao hàng (Đẩy sang hãng) */}
           {order.status === 'confirmed' && (
             <button
               type="button"
               className={styles.btnPrimary}
-              style={{ background: 'var(--primary, #3b82f6)' }}
+              style={{ background: '#ea580c' }}
               onClick={() => setIsShipModalOpen(true)}
               disabled={updating}
             >
-              <FiTruck /> Chọn Đơn Vị Giao Hàng
+              <FiTruck /> Giao Hàng (Đẩy Sang Hãng)
             </button>
           )}
 
-          {/* Shipping: Hoàn thành đơn */}
-          {order.status === 'shipping' && (
+          {/* 3. Đang giao hàng (shipping / delivering): Hiển thị nút Xác nhận đã giao thành công */}
+          {(order.status === 'shipping' || order.status === 'delivering') && (
             <button
               className={styles.btnPrimary}
               style={{ background: '#10b981' }}
-              onClick={() => updateOrderStatus('delivered', 'paid')}
+              onClick={() => setIsDeliverModalOpen(true)}
               disabled={updating}
             >
-              <FiCheck /> Hoàn thành đơn
+              <FiCheckCircle /> Xác Nhận Đã Giao Hàng
             </button>
           )}
         </div>
@@ -369,6 +372,48 @@ export default function OrderDetailPage() {
         <OrderPackingSlipModal
           orders={[order]}
           onClose={() => setIsSlipModalOpen(false)}
+        />
+      )}
+
+      {/* Cancel Order Confirm Modal */}
+      {order && (
+        <CancelOrderConfirmModal
+          isOpen={isCancelModalOpen}
+          orderCode={order.orderCode}
+          trackingCode={order.trackingCode}
+          carrier={order.shippingCarrier || order.shippingProvider}
+          isCancelling={isCancelling}
+          onConfirm={async (reason) => {
+            setIsCancelling(true);
+            try {
+              await updateOrderStatus('cancelled', undefined, false, reason);
+              setIsCancelModalOpen(false);
+            } finally {
+              setIsCancelling(false);
+            }
+          }}
+          onClose={() => setIsCancelModalOpen(false)}
+        />
+      )}
+
+      {/* Deliver Confirm Modal */}
+      {order && (
+        <DeliverConfirmModal
+          isOpen={isDeliverModalOpen}
+          orderCode={order.orderCode}
+          isCod={order.paymentMethod === 'cod'}
+          totalAmount={order.totalAmount}
+          isConfirming={isDelivering}
+          onConfirm={async () => {
+            setIsDelivering(true);
+            try {
+              await updateOrderStatus('delivered', order.paymentMethod === 'cod' ? 'paid' : order.paymentStatus);
+              setIsDeliverModalOpen(false);
+            } finally {
+              setIsDelivering(false);
+            }
+          }}
+          onClose={() => setIsDeliverModalOpen(false)}
         />
       )}
 

@@ -145,9 +145,12 @@ export default function ShipOrderModal({ order, onClose, onSuccess }: ShipOrderM
           if (pushData.success && pushData.data?.trackingCode) {
             finalTrackingCode = pushData.data.trackingCode;
             toast.success(`Hãng ${selectedCarrierObj.shortName} đã cấp mã vận đơn: ${finalTrackingCode}`);
+          } else if (!pushData.success) {
+            toast.error(pushData.message || 'Lỗi khi tạo vận đơn sang hãng vận chuyển', { duration: 6000 });
           }
-        } catch (apiErr) {
+        } catch (apiErr: any) {
           console.warn('Carrier Auto API push warning, falling back to direct update:', apiErr);
+          toast.error(`Lỗi kết nối tới hãng vận chuyển: ${apiErr.message || 'Vui lòng thử lại'}`, { duration: 6000 });
         }
       }
 
