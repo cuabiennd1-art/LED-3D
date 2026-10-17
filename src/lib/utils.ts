@@ -133,5 +133,21 @@ export function sanitizeAndTransformRichDescription(html?: string | null): strin
     return match;
   });
 
+  // 4. Đảm bảo tất cả thẻ <video> đều có playsinline, muted, loop
+  // để hỗ trợ tự động chạy khi lướt tới theo chính sách autoplay của trình duyệt
+  transformed = transformed.replace(/<video\b([^>]*)>/gi, (match, attrs) => {
+    let newAttrs = attrs;
+    if (!/\bplaysinline\b/i.test(newAttrs)) {
+      newAttrs += ' playsinline';
+    }
+    if (!/\bmuted\b/i.test(newAttrs)) {
+      newAttrs += ' muted';
+    }
+    if (!/\bloop\b/i.test(newAttrs)) {
+      newAttrs += ' loop';
+    }
+    return `<video${newAttrs}>`;
+  });
+
   return transformed;
 }

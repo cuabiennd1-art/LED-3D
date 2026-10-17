@@ -23,9 +23,20 @@ import styles from './ProductDetailModal.module.css';
 interface ProductDetailModalProps {
   product: any | null;
   onClose: () => void;
+  initialAttributes?: Record<string, string>;
+  initialQuantity?: number;
+  mode?: 'all' | 'cart' | 'buy';
+  onSuccess?: (action: 'cart' | 'buy', selectedVariant: any, qty: number) => void;
 }
 
-export default function ProductDetailModal({ product, onClose }: ProductDetailModalProps) {
+export default function ProductDetailModal({
+  product,
+  onClose,
+  initialAttributes,
+  initialQuantity,
+  mode = 'all',
+  onSuccess,
+}: ProductDetailModalProps) {
   const router = useRouter();
   const { addToCart, buyNow } = useCart();
 
@@ -97,26 +108,16 @@ export default function ProductDetailModal({ product, onClose }: ProductDetailMo
   // Initialize selections when product opens
   useEffect(() => {
     if (product) {
-      setQuantity(1);
+      setQuantity(initialQuantity && initialQuantity > 0 ? initialQuantity : 1);
       setActiveImageIndex(0);
 
       const initialSelection: Record<string, string> = {};
-      if (variants.length > 0) {
-        const firstInStock = variants.find((v) => (v.stock ?? 0) > 0) || variants[0];
-        if (firstInStock) {
-          Object.assign(initialSelection, firstInStock.attributes || {});
-        }
+      if (initialAttributes && Object.keys(initialAttributes).length > 0) {
+        Object.assign(initialSelection, initialAttributes);
       }
-
-      options.forEach((opt) => {
-        if (!initialSelection[opt.name] && opt.values.length > 0) {
-          initialSelection[opt.name] = opt.values[0];
-        }
-      });
-
       setSelectedAttributes(initialSelection);
     }
-  }, [product, variants, options]);
+  }, [product, initialAttributes, initialQuantity]);
 
   // Resolve matching variant
   const matchedVariant = useMemo(() => {
@@ -148,6 +149,68 @@ export default function ProductDetailModal({ product, onClose }: ProductDetailMo
   const discountPercent = hasDiscount && originalPrice > 0
     ? Math.round(((originalPrice - currentPrice) / originalPrice) * 100)
     : null;
+
+  const hasOptions = options.length > 0 || (variants && variants.length > 1);
+
+  const isAllOptionsSelected = useMemo(() => {
+    if (!hasOptions) return true;
+    if (options.length > 0) {
+      return options.every((opt) => Boolean(selectedAttributes[opt.name]));
+    }
+    if (variants.length > 1) {
+      return Boolean(matchedVariant);
+    }
+    return true;
+  }, [hasOptions, options, selectedAttributes, matchedVariant]);
+
+  const priceRange = useMemo(() => {
+    if (!variants || variants.length === 0) {
+      const p = product?.salePrice && product.salePrice > 0 ? product.salePrice : (product?.price || 0);
+      return { min: p, max: p, hasRange: false };
+    }
+    const prices = variants.map((v) => {
+      if (typeof v.salePrice === 'number' && v.salePrice > 0) return v.salePrice;
+      if (typeof v.price === 'number' && v.price > 0) return v.price;
+      return (product?.salePrice && product.salePrice > 0) ? product.salePrice : (product?.price || 0);
+    });
+    const min = Math.min(...prices);
+    const max = Math.max(...prices);
+    return { min, max, hasRange: min < max && isFinite(min) && isFinite(max) };
+  }, [variants, product]);
+
+  const originalPriceRange = useMemo(() => {
+    if (!variants || variants.length === 0) {
+      const orig = product?.originalPrice || (product?.salePrice && product.price > product.salePrice ? product.price : null);
+      return { min: orig, max: orig, hasRange: false };
+    }
+    const origPrices = variants.map((v) => {
+      if (typeof v.originalPrice === 'number' && v.originalPrice > 0) return v.originalPrice;
+      if (typeof v.price === 'number' && v.price > 0) return v.price;
+      return product?.originalPrice || product?.price || 0;
+    });
+    const min = Math.min(...origPrices);
+    const max = Math.max(...origPrices);
+    return { min, max, hasRange: min < max && isFinite(min) && isFinite(max) };
+  }, [variants, product]);
+
+  const shouldShowPriceRange = hasOptions && !isAllOptionsSelected && priceRange.hasRange;
+
+  const displayPriceText = useMemo(() => {
+    if (shouldShowPriceRange) {
+      return `${formatPrice(priceRange.min)} - ${formatPrice(priceRange.max)}`;
+    }
+    return formatPrice(currentPrice);
+  }, [shouldShowPriceRange, priceRange, currentPrice]);
+
+  const displayOriginalPriceText = useMemo(() => {
+    if (shouldShowPriceRange) {
+      if (originalPriceRange.hasRange) {
+        return `${formatPrice(originalPriceRange.min)} - ${formatPrice(originalPriceRange.max)}`;
+      }
+      return originalPriceRange.max && originalPriceRange.max > priceRange.min ? formatPrice(originalPriceRange.max) : null;
+    }
+    return hasDiscount ? formatPrice(originalPrice) : null;
+  }, [shouldShowPriceRange, originalPriceRange, priceRange, hasDiscount, originalPrice]);
 
   const totalStock = useMemo(() => {
     if (variants && variants.length > 0) {
@@ -201,10 +264,27 @@ export default function ProductDetailModal({ product, onClose }: ProductDetailMo
 
   const handleSelectAttribute = (optionName: string, value: string) => {
     if (!isOptionValueAvailable(optionName, value)) return;
-    setSelectedAttributes((prev) => ({
-      ...prev,
-      [optionName]: value,
-    }));
+    setSelectedAttributes((prev) => {
+      if (prev[optionName] === value) {
+        const next = { ...prev };
+        delete next[optionName];
+        return next;
+      }
+      return {
+        ...prev,
+        [optionName]: value,
+      };
+    });
+  };
+
+  const handleSelectGenericVariant = (v: any) => {
+    const isSelected = matchedVariant?._id === v._id || matchedVariant?.sku === v.sku;
+    if (isSelected) {
+      setSelectedAttributes({});
+    } else {
+      const rawAttrs = v.attributes instanceof Map ? Object.fromEntries(v.attributes) : (v.attributes || { 'Phân loại': v.title });
+      setSelectedAttributes(rawAttrs);
+    }
   };
 
   const validateSelection = (): boolean => {
@@ -245,6 +325,9 @@ export default function ProductDetailModal({ product, onClose }: ProductDetailMo
       flashPrice: product.flashPrice || currentPrice,
     };
     addToCart(productToAdd, quantity, matchedVariant || undefined);
+    if (onSuccess) {
+      onSuccess('cart', matchedVariant, quantity);
+    }
     onClose();
   };
 
@@ -257,6 +340,9 @@ export default function ProductDetailModal({ product, onClose }: ProductDetailMo
       flashPrice: product.flashPrice || currentPrice,
     };
     buyNow(productToBuy, quantity, matchedVariant || undefined);
+    if (onSuccess) {
+      onSuccess('buy', matchedVariant, quantity);
+    }
     onClose();
     router.push('/checkout');
   };
@@ -283,9 +369,9 @@ export default function ProductDetailModal({ product, onClose }: ProductDetailMo
 
           <div className={styles.headerInfo}>
             <div className={styles.priceRow}>
-              <span className={styles.currentPrice}>{formatPrice(currentPrice)}</span>
-              {hasDiscount && (
-                <span className={styles.oldPrice}>{formatPrice(originalPrice)}</span>
+              <span className={styles.currentPrice}>{displayPriceText}</span>
+              {displayOriginalPriceText && (
+                <span className={styles.oldPrice}>{displayOriginalPriceText}</span>
               )}
             </div>
 
@@ -298,7 +384,7 @@ export default function ProductDetailModal({ product, onClose }: ProductDetailMo
             </div>
 
             <div className={styles.selectedLabel}>
-              {selectedSummary ? (
+              {isAllOptionsSelected && selectedSummary ? (
                 <span>Đã chọn: <strong style={{ color: 'var(--primary, #3b82f6)' }}>{selectedSummary}</strong></span>
               ) : (
                 <span style={{ color: 'var(--text-muted, #94a3b8)' }}>Vui lòng chọn phân loại</span>
@@ -363,7 +449,7 @@ export default function ProductDetailModal({ product, onClose }: ProductDetailMo
                       type="button"
                       disabled={!isAvail}
                       className={`${styles.variantChip} ${isSelected ? styles.variantChipActive : ''} ${!isAvail ? styles.variantChipDisabled : ''}`}
-                      onClick={() => isAvail && setSelectedAttributes(v.attributes || {})}
+                      onClick={() => isAvail && handleSelectGenericVariant(v)}
                     >
                       {v.title}
                     </button>
@@ -402,25 +488,29 @@ export default function ProductDetailModal({ product, onClose }: ProductDetailMo
 
         {/* ===== 3. FIXED BOTTOM ACTION BAR ===== */}
         <div className={styles.footerActions}>
-          <button
-            type="button"
-            className={styles.addCartBtn}
-            onClick={handleAddToCart}
-            disabled={isOutOfStock}
-          >
-            <FiShoppingCart size={16} />
-            <span>{isOutOfStock ? 'Hết hàng' : 'Thêm giỏ'}</span>
-          </button>
+          {(mode === 'all' || mode === 'cart') && (
+            <button
+              type="button"
+              className={`${styles.addCartBtn} ${mode === 'cart' ? styles.fullWidthBtn : ''}`}
+              onClick={handleAddToCart}
+              disabled={isOutOfStock}
+            >
+              <FiShoppingCart size={16} />
+              <span>{isOutOfStock ? 'Hết hàng' : mode === 'cart' ? 'Thêm vào giỏ hàng' : 'Thêm giỏ'}</span>
+            </button>
+          )}
 
-          <button
-            type="button"
-            className={styles.buyNowBtn}
-            onClick={handleBuyNow}
-            disabled={isOutOfStock}
-          >
-            <FiZap size={16} />
-            <span>{isOutOfStock ? 'Tạm hết hàng' : 'Mua ngay'}</span>
-          </button>
+          {(mode === 'all' || mode === 'buy') && (
+            <button
+              type="button"
+              className={`${styles.buyNowBtn} ${mode === 'buy' ? styles.fullWidthBtn : ''}`}
+              onClick={handleBuyNow}
+              disabled={isOutOfStock}
+            >
+              <FiZap size={16} />
+              <span>{isOutOfStock ? 'Tạm hết hàng' : 'Mua ngay'}</span>
+            </button>
+          )}
         </div>
       </div>
     </div>

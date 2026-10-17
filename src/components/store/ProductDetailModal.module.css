@@ -389,6 +389,13 @@
   cursor: not-allowed;
 }
 
+.fullWidthBtn {
+  flex: 1 1 100% !important;
+  width: 100% !important;
+  padding: 13px 0 !important;
+  font-size: 14px !important;
+}
+
 /* Animations */
 @keyframes fadeIn {
   from {
@@ -405,5 +412,31 @@
   }
   to {
     transform: translateY(0);
+  }
+}
+
+@keyframes zoomInModal {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Desktop Modal Enhancements */
+@media (min-width: 640px) {
+  .overlay {
+    align-items: center;
+    padding: 24px;
+  }
+
+  .modal {
+    border-radius: 20px;
+    border-bottom: 1px solid var(--border-color, #232838);
+    max-height: 85vh;
+    animation: zoomInModal 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   }
 }

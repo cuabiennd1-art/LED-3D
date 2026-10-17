@@ -40,6 +40,7 @@ import StoreLoading from '@/components/store/StoreLoading';
 import BannerNotice from '@/components/common/BannerNotice';
 import VoucherCollectionBar from '@/components/store/VoucherCollectionBar';
 import StoreProductCard, { ProductItem } from '@/components/store/home/StoreProductCard';
+import ProductDetailModal from '@/components/store/ProductDetailModal';
 import { apiFetch } from '@/lib/api';
 import { compressImage } from '@/lib/image-utils';
 import {
@@ -103,6 +104,11 @@ export default function ProductDetailPage() {
   const [isGalleryPaused, setIsGalleryPaused] = useState(false);
 
 
+
+  // Variant Selection Step Modal (Thêm bước chọn loại sản phẩm)
+  const [isVariantModalOpen, setIsVariantModalOpen] = useState(false);
+  const [variantModalMode, setVariantModalMode] = useState<'all' | 'cart' | 'buy'>('all');
+  const [selectedProductForModal, setSelectedProductForModal] = useState<any | null>(null);
 
   // Related products state ("Có thể bạn cũng thích")
   const [relatedProducts, setRelatedProducts] = useState<ProductItem[]>([]);
@@ -361,16 +367,8 @@ export default function ProductDetailPage() {
             setFlashSaleItem(null);
           }
 
-          // Initialize default attributes from first available variant or option defaults
-          const initAttrs: Record<string, string> = {};
-          if (p.options && Array.isArray(p.options) && p.options.length > 0) {
-            p.options.forEach((opt: IProductOption) => {
-              if (opt.values && opt.values.length > 0) {
-                initAttrs[opt.name] = opt.values[0];
-              }
-            });
-          }
-          setSelectedAttributes(initAttrs);
+          // Khách lần đầu vào trang sẽ KHÔNG chọn phân loại luôn
+          setSelectedAttributes({});
 
           // 2. Cross-verify with live /api/flash-sale data
           if (fsData && fsData.success && fsData.data && fsData.data.isActive && fsData.data.isLive) {
@@ -516,8 +514,7 @@ export default function ProductDetailPage() {
   const handleQuickAddRelated = (e: React.MouseEvent, relProd: ProductItem) => {
     e.preventDefault();
     e.stopPropagation();
-    addToCart(relProd, 1);
-    toast.success('Đã thêm sản phẩm vào giỏ hàng!');
+    setSelectedProductForModal(relProd);
   };
 
   // Derive Options and Variants from Product Data
@@ -602,6 +599,111 @@ export default function ProductDetailPage() {
     ? Math.round(((originalPrice - currentPrice) / originalPrice) * 100)
     : null;
 
+  // Check if product has multi-variants/options
+  const hasOptions = options.length > 0 || (variants && variants.length > 1);
+
+  // Check if user has explicitly selected all options
+  const isAllOptionsSelected = useMemo(() => {
+    if (!hasOptions) return true;
+    if (options.length > 0) {
+      return options.every((opt) => Boolean(selectedAttributes[opt.name]));
+    }
+    if (variants.length > 1) {
+      return Boolean(matchedVariant);
+    }
+    return true;
+  }, [hasOptions, options, selectedAttributes, matchedVariant]);
+
+  // Price range calculation when variant is not yet selected (Giá lớn nhất và nhỏ nhất)
+  const priceRange = useMemo(() => {
+    if (!variants || variants.length === 0) {
+      const p = product?.salePrice && product.salePrice > 0 ? product.salePrice : (product?.price || 0);
+      return { min: p, max: p, hasRange: false };
+    }
+
+    const prices = variants.map((v) => {
+      if (typeof v.salePrice === 'number' && v.salePrice > 0) return v.salePrice;
+      if (typeof v.price === 'number' && v.price > 0) return v.price;
+      return (product?.salePrice && product.salePrice > 0) ? product.salePrice : (product?.price || 0);
+    });
+
+    const min = Math.min(...prices);
+    const max = Math.max(...prices);
+    return {
+      min,
+      max,
+      hasRange: min < max && isFinite(min) && isFinite(max),
+    };
+  }, [variants, product]);
+
+  const originalPriceRange = useMemo(() => {
+    if (!variants || variants.length === 0) {
+      const orig = product?.originalPrice || (product?.salePrice && product.price > product.salePrice ? product.price : null);
+      return { min: orig, max: orig, hasRange: false };
+    }
+
+    const origPrices = variants.map((v) => {
+      if (typeof v.originalPrice === 'number' && v.originalPrice > 0) return v.originalPrice;
+      if (typeof v.price === 'number' && v.price > 0) return v.price;
+      return product?.originalPrice || product?.price || 0;
+    });
+
+    const min = Math.min(...origPrices);
+    const max = Math.max(...origPrices);
+    return {
+      min,
+      max,
+      hasRange: min < max && isFinite(min) && isFinite(max),
+    };
+  }, [variants, product]);
+
+  const maxDiscountPercent = useMemo(() => {
+    if (!variants || variants.length === 0) return discountPercent;
+    const discounts = variants.map((v) => {
+      const eff = (typeof v.salePrice === 'number' && v.salePrice > 0) ? v.salePrice : (v.price || 0);
+      const orig = (typeof v.originalPrice === 'number' && v.originalPrice > eff)
+        ? v.originalPrice
+        : (v.price && v.price > eff ? v.price : 0);
+      if (orig > eff) {
+        return Math.round(((orig - eff) / orig) * 100);
+      }
+      return 0;
+    });
+    const max = Math.max(...discounts, 0);
+    return max > 0 ? max : null;
+  }, [variants, discountPercent]);
+
+  // Khi chưa chọn phân loại: hiển thị khoảng giá min - max
+  // Khi đã chọn phân loại: hiển thị đúng giá của phân loại đó
+  const shouldShowPriceRange = hasOptions && !isAllOptionsSelected && priceRange.hasRange;
+
+  const displayCurrentPriceText = useMemo(() => {
+    if (shouldShowPriceRange) {
+      return `${formatPrice(priceRange.min)} - ${formatPrice(priceRange.max)}`;
+    }
+    return formatPrice(currentPrice);
+  }, [shouldShowPriceRange, priceRange, currentPrice]);
+
+  const displayOriginalPriceText = useMemo(() => {
+    if (shouldShowPriceRange) {
+      if (originalPriceRange.hasRange) {
+        return `${formatPrice(originalPriceRange.min)} - ${formatPrice(originalPriceRange.max)}`;
+      }
+      if (originalPriceRange.max && originalPriceRange.max > priceRange.min) {
+        return formatPrice(originalPriceRange.max);
+      }
+      return null;
+    }
+    return hasDiscount ? formatPrice(originalPrice) : null;
+  }, [shouldShowPriceRange, originalPriceRange, priceRange, hasDiscount, originalPrice]);
+
+  const displayDiscountBadge = useMemo(() => {
+    if (shouldShowPriceRange) {
+      return maxDiscountPercent ? `-${maxDiscountPercent}%` : null;
+    }
+    return hasDiscount && discountPercent ? `-${discountPercent}%` : null;
+  }, [shouldShowPriceRange, maxDiscountPercent, hasDiscount, discountPercent]);
+
   // Stock Calculation
   const totalStock = useMemo(() => {
     if (variants && variants.length > 0) {
@@ -669,16 +771,45 @@ export default function ProductDetailPage() {
   };
 
   const handleSelectAttribute = (optName: string, val: string) => {
-    setSelectedAttributes((prev) => ({
-      ...prev,
-      [optName]: val,
-    }));
+    setSelectedAttributes((prev) => {
+      if (prev[optName] === val) {
+        const next = { ...prev };
+        delete next[optName];
+        return next;
+      }
+      return {
+        ...prev,
+        [optName]: val,
+      };
+    });
+  };
+
+  const handleSelectGenericVariant = (v: any) => {
+    const isSelected = matchedVariant?._id === v._id || matchedVariant?.sku === v.sku;
+    if (isSelected) {
+      setSelectedAttributes({});
+    } else {
+      const rawAttrs = v.attributes instanceof Map ? Object.fromEntries(v.attributes) : (v.attributes || { 'Phân loại': v.title });
+      setSelectedAttributes(rawAttrs);
+    }
   };
 
   const handleAddToCart = () => {
     if (!product) return;
     if (isOutOfStock) {
       toast.error('Sản phẩm tạm thời hết hàng');
+      return;
+    }
+
+    const hasOptions = options.length > 0 || (variants && variants.length > 1);
+    const isAllOptionsSelected = options.length > 0
+      ? options.every((opt) => Boolean(selectedAttributes[opt.name]))
+      : Boolean(matchedVariant || (variants && variants.length <= 1));
+
+    if (hasOptions && !isAllOptionsSelected) {
+      toast.error('Vui lòng chọn phân loại sản phẩm!');
+      setVariantModalMode('cart');
+      setIsVariantModalOpen(true);
       return;
     }
 
@@ -697,12 +828,62 @@ export default function ProductDetailPage() {
       return;
     }
 
+    const hasOptions = options.length > 0 || (variants && variants.length > 1);
+    const isAllOptionsSelected = options.length > 0
+      ? options.every((opt) => Boolean(selectedAttributes[opt.name]))
+      : Boolean(matchedVariant || (variants && variants.length <= 1));
+
+    if (hasOptions && !isAllOptionsSelected) {
+      toast.error('Vui lòng chọn phân loại sản phẩm!');
+      setVariantModalMode('buy');
+      setIsVariantModalOpen(true);
+      return;
+    }
+
     const prodWithFlash = (flashSaleItem?.flashPrice && flashSaleItem?.isLive)
       ? { ...product, flashPrice: flashSaleItem.flashPrice, isFlashSale: true }
       : product;
 
     buyNow(prodWithFlash, quantity, matchedVariant || undefined);
     router.push('/checkout');
+  };
+
+  const handleAddToCartMobile = () => {
+    if (!product) return;
+    if (isOutOfStock) {
+      toast.error('Sản phẩm tạm thời hết hàng');
+      return;
+    }
+    const hasOptions = options.length > 0 || (variants && variants.length > 0);
+    if (hasOptions) {
+      setVariantModalMode('cart');
+      setIsVariantModalOpen(true);
+    } else {
+      handleAddToCart();
+    }
+  };
+
+  const handleBuyNowMobile = () => {
+    if (!product) return;
+    if (isOutOfStock) {
+      toast.error('Sản phẩm tạm thời hết hàng');
+      return;
+    }
+    const hasOptions = options.length > 0 || (variants && variants.length > 0);
+    if (hasOptions) {
+      setVariantModalMode('buy');
+      setIsVariantModalOpen(true);
+    } else {
+      handleBuyNow();
+    }
+  };
+
+  const handleVariantModalSuccess = (action: 'cart' | 'buy', matchedV: any, qty: number) => {
+    if (matchedV?.attributes) {
+      const rawAttrs = matchedV.attributes instanceof Map ? Object.fromEntries(matchedV.attributes) : matchedV.attributes;
+      setSelectedAttributes(rawAttrs);
+    }
+    setQuantity(qty);
   };
 
   const handleShare = () => {
@@ -749,6 +930,95 @@ export default function ProductDetailPage() {
       }
     }
   };
+
+  // Tự động phát video trong phần Chi Tiết Sản Phẩm khi lướt tới, dừng khi lướt qua
+  useEffect(() => {
+    if (loading || !product?.description) return;
+
+    let observer: IntersectionObserver | null = null;
+    let timer: NodeJS.Timeout | null = null;
+    let rafId: number | null = null;
+    const visibleMap = new WeakMap<HTMLVideoElement, boolean>();
+
+    const setupObserver = () => {
+      const selector = `.${styles.richDescription} video, .${styles.descContent} video, .${styles.fullDescText} video`;
+      const videoElements = Array.from(document.querySelectorAll<HTMLVideoElement>(selector));
+
+      if (videoElements.length === 0) return;
+
+      if (observer) {
+        observer.disconnect();
+        observer = null;
+      }
+
+      // Cấu hình các video: muted, playsinline, loop để tuân thủ autoplay policy của trình duyệt
+      videoElements.forEach((vid) => {
+        vid.muted = true;
+        vid.defaultMuted = true;
+        vid.playsInline = true;
+        vid.setAttribute('playsinline', '');
+        vid.setAttribute('muted', '');
+        vid.loop = true;
+        vid.setAttribute('loop', '');
+      });
+
+      observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            const video = entry.target as HTMLVideoElement;
+            // Video được coi là hiển thị khi xuất hiện từ 20% trở lên trong viewport
+            const isVisible = entry.isIntersecting && entry.intersectionRatio >= 0.2;
+            const wasVisible = visibleMap.get(video) || false;
+
+            if (isVisible && !wasVisible) {
+              // Vừa lướt tới: tự động phát
+              visibleMap.set(video, true);
+              const playPromise = video.play();
+              if (playPromise !== undefined) {
+                playPromise.catch(() => {
+                  // Fallback: nếu trình duyệt chặn, đảm bảo muted và phát lại
+                  video.muted = true;
+                  video.play().catch(() => {});
+                });
+              }
+            } else if (!isVisible && wasVisible) {
+              // Vừa lướt qua / ra ngoài viewport: tạm dừng
+              visibleMap.set(video, false);
+              if (!video.paused) {
+                video.pause();
+              }
+            }
+          });
+        },
+        {
+          threshold: [0, 0.2, 0.5, 0.8],
+        }
+      );
+
+      videoElements.forEach((vid) => observer?.observe(vid));
+    };
+
+    // Chạy observer sau khi DOM render xong
+    rafId = requestAnimationFrame(setupObserver);
+    timer = setTimeout(setupObserver, 200);
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        const selector = `.${styles.richDescription} video, .${styles.descContent} video, .${styles.fullDescText} video`;
+        document.querySelectorAll<HTMLVideoElement>(selector).forEach((v) => {
+          if (!v.paused) v.pause();
+        });
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      if (rafId) cancelAnimationFrame(rafId);
+      if (timer) clearTimeout(timer);
+      if (observer) observer.disconnect();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [loading, product?.description, product?._id, isExpandModalOpen]);
 
   // Render product description with HTML & interleaved images support
   const renderDescriptionContent = (content?: string, extraClass: string = '') => {
@@ -948,12 +1218,12 @@ export default function ProductDetailPage() {
                 className={styles.mobileCurrentPrice}
                 style={{ color: (flashSaleItem && flashSaleItem.isLive) ? '#f97316' : undefined }}
               >
-                {formatPrice(currentPrice)}
+                {displayCurrentPriceText}
               </span>
-              {hasDiscount && (
+              {displayOriginalPriceText && (
                 <>
-                  <span className={styles.mobileOldPrice}>{formatPrice(originalPrice)}</span>
-                  {discountPercent && (
+                  <span className={styles.mobileOldPrice}>{displayOriginalPriceText}</span>
+                  {displayDiscountBadge && (
                     <span
                       className={styles.mobileDiscountBadge}
                       style={{
@@ -961,7 +1231,7 @@ export default function ProductDetailPage() {
                         color: (flashSaleItem && flashSaleItem.isLive) ? '#ffffff' : undefined,
                       }}
                     >
-                      -{discountPercent}%
+                      {displayDiscountBadge}
                     </span>
                   )}
                 </>
@@ -1009,7 +1279,7 @@ export default function ProductDetailPage() {
                 <div key={opt.name} className={styles.variantSection}>
                   <div className={styles.variantTitle}>
                     <span>{opt.name}:</span>
-                    {selectedAttributes[opt.name] && (
+                    {selectedAttributes[opt.name] ? (
                       <span style={{ color: 'var(--primary, #ee4d2d)', fontWeight: 700, marginLeft: 4 }}>
                         {selectedAttributes[opt.name]}
                         {matchedVariant && typeof matchedVariant.stock === 'number' && (
@@ -1017,6 +1287,10 @@ export default function ProductDetailPage() {
                             (Còn {matchedVariant.stock} sp)
                           </span>
                         )}
+                      </span>
+                    ) : (
+                      <span style={{ fontSize: 12, color: 'var(--text-muted, #94a3b8)', fontWeight: 400, marginLeft: 6 }}>
+                        (Vui lòng chọn)
                       </span>
                     )}
                   </div>
@@ -1044,7 +1318,23 @@ export default function ProductDetailPage() {
 
               {options.length === 0 && variants.length > 0 && (
                 <div className={styles.variantSection}>
-                  <div className={styles.variantTitle}>Phân loại hàng</div>
+                  <div className={styles.variantTitle}>
+                    <span>Phân loại hàng:</span>
+                    {matchedVariant?.title ? (
+                      <span style={{ color: 'var(--primary, #ee4d2d)', fontWeight: 700, marginLeft: 4 }}>
+                        {matchedVariant.title}
+                        {typeof matchedVariant.stock === 'number' && (
+                          <span style={{ fontSize: 11.5, color: 'var(--text-muted, #64748b)', fontWeight: 500, marginLeft: 6 }}>
+                            (Còn {matchedVariant.stock} sp)
+                          </span>
+                        )}
+                      </span>
+                    ) : (
+                      <span style={{ fontSize: 12, color: 'var(--text-muted, #94a3b8)', fontWeight: 400, marginLeft: 6 }}>
+                        (Vui lòng chọn)
+                      </span>
+                    )}
+                  </div>
                   <div className={styles.variantChips}>
                     {variants.map((v, idx) => {
                       const isSelected = matchedVariant?._id === v._id || matchedVariant?.sku === v.sku;
@@ -1055,7 +1345,7 @@ export default function ProductDetailPage() {
                           type="button"
                           disabled={!isAvail}
                           className={`${styles.variantBtn} ${isSelected ? styles.activeVariant : ''} ${!isAvail ? styles.disabledVariant : ''}`}
-                          onClick={() => isAvail && setSelectedAttributes(v.attributes || {})}
+                          onClick={() => isAvail && handleSelectGenericVariant(v)}
                         >
                           {v.title}
                         </button>
@@ -1300,7 +1590,7 @@ export default function ProductDetailPage() {
           <button
             type="button"
             className={styles.addCartBtn}
-            onClick={handleAddToCart}
+            onClick={handleAddToCartMobile}
             disabled={isOutOfStock}
             style={isOutOfStock ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
           >
@@ -1309,7 +1599,7 @@ export default function ProductDetailPage() {
           <button
             type="button"
             className={styles.buyNowBtn}
-            onClick={handleBuyNow}
+            onClick={handleBuyNowMobile}
             disabled={isOutOfStock}
             style={isOutOfStock ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
           >
@@ -1520,14 +1810,14 @@ export default function ProductDetailPage() {
 
               <div className={styles.priceRow}>
                 <span className={styles.currentPrice}>
-                  {formatPrice(currentPrice)}
+                  {displayCurrentPriceText}
                 </span>
-                {hasDiscount && (
+                {displayOriginalPriceText && (
                   <>
-                    <span className={styles.oldPrice}>{formatPrice(originalPrice)}</span>
-                    {discountPercent && (
+                    <span className={styles.oldPrice}>{displayOriginalPriceText}</span>
+                    {displayDiscountBadge && (
                       <span className={styles.discountBadge}>
-                        -{discountPercent}%
+                        {displayDiscountBadge}
                       </span>
                     )}
                   </>
@@ -1551,7 +1841,7 @@ export default function ProductDetailPage() {
                   <div key={opt.name} className={styles.variantSection}>
                     <div className={styles.variantTitle}>
                       <span>{opt.name}:</span>
-                      {selectedAttributes[opt.name] && (
+                      {selectedAttributes[opt.name] ? (
                         <span className={styles.selectedVariantText}>
                           {' '}{selectedAttributes[opt.name]}
                           {matchedVariant && typeof matchedVariant.stock === 'number' && (
@@ -1559,6 +1849,10 @@ export default function ProductDetailPage() {
                               (Còn {matchedVariant.stock} sản phẩm)
                             </span>
                           )}
+                        </span>
+                      ) : (
+                        <span style={{ fontSize: 12, color: 'var(--text-muted, #94a3b8)', fontWeight: 400, marginLeft: 6 }}>
+                          (Vui lòng chọn)
                         </span>
                       )}
                     </div>
@@ -1585,7 +1879,23 @@ export default function ProductDetailPage() {
 
                 {options.length === 0 && variants.length > 0 && (
                   <div className={styles.variantSection}>
-                    <div className={styles.variantTitle}>Phân loại hàng:</div>
+                    <div className={styles.variantTitle}>
+                      <span>Phân loại hàng:</span>
+                      {matchedVariant?.title ? (
+                        <span className={styles.selectedVariantText}>
+                          {' '}{matchedVariant.title}
+                          {typeof matchedVariant.stock === 'number' && (
+                            <span style={{ fontSize: 12, color: 'var(--text-muted, #64748b)', fontWeight: 500, marginLeft: 6 }}>
+                              (Còn {matchedVariant.stock} sản phẩm)
+                            </span>
+                          )}
+                        </span>
+                      ) : (
+                        <span style={{ fontSize: 12, color: 'var(--text-muted, #94a3b8)', fontWeight: 400, marginLeft: 6 }}>
+                          (Vui lòng chọn)
+                        </span>
+                      )}
+                    </div>
                     <div className={styles.variantChips}>
                       {variants.map((v, idx) => {
                         const isSelected = matchedVariant?._id === v._id || matchedVariant?.sku === v.sku;
@@ -1596,7 +1906,7 @@ export default function ProductDetailPage() {
                             type="button"
                             disabled={!isAvail}
                             className={`${styles.variantBtn} ${isSelected ? styles.activeVariant : ''} ${!isAvail ? styles.disabledVariant : ''}`}
-                            onClick={() => isAvail && setSelectedAttributes(v.attributes || {})}
+                            onClick={() => isAvail && handleSelectGenericVariant(v)}
                           >
                             {v.title}
                           </button>
@@ -2249,6 +2559,35 @@ export default function ProductDetailPage() {
           </button>
           <img src={lightboxImage} alt="Ảnh phóng to" className={styles.lightboxImg} />
         </div>
+      )}
+
+      {/* =========================================================================
+          6. VARIANT SELECTION STEP MODAL (CHỌN LOẠI SẢN PHẨM)
+          ========================================================================= */}
+      {isVariantModalOpen && product && (
+        <ProductDetailModal
+          product={
+            flashSaleItem?.flashPrice && flashSaleItem?.isLive
+              ? { ...product, flashPrice: flashSaleItem.flashPrice, isFlashSale: true }
+              : product
+          }
+          initialAttributes={selectedAttributes}
+          initialQuantity={quantity}
+          mode={variantModalMode}
+          onSuccess={handleVariantModalSuccess}
+          onClose={() => setIsVariantModalOpen(false)}
+        />
+      )}
+
+      {/* =========================================================================
+          7. MODAL FOR RELATED PRODUCTS QUICK ADD
+          ========================================================================= */}
+      {selectedProductForModal && (
+        <ProductDetailModal
+          product={selectedProductForModal}
+          onClose={() => setSelectedProductForModal(null)}
+          mode="all"
+        />
       )}
     </div>
   );

@@ -732,6 +732,8 @@ export default function ProductDescriptionEditor({
             controls 
             preload="metadata" 
             playsinline 
+            muted 
+            loop 
             style="max-width: 100%; height: auto; border-radius: 12px; display: inline-block; box-shadow: 0 4px 16px rgba(0,0,0,0.15);"
           ></video>
         </p>
