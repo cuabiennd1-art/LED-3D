@@ -665,6 +665,26 @@
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
 }
 
+.richDescription video,
+.descContent video,
+.fullDescText video {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 16px auto;
+  border-radius: 12px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+  background-color: #000000;
+}
+
+.richDescription iframe,
+.descContent iframe,
+.fullDescText iframe {
+  max-width: 100%;
+  border-radius: 12px;
+  border: none;
+}
+
 .descFadeOverlay {
   position: absolute;
   bottom: 0;
@@ -1527,6 +1547,18 @@
 .pcChatBtn:hover {
   border-color: var(--primary, #3b82f6);
   color: var(--primary, #3b82f6);
+}
+
+.pcZaloChatBtn {
+  border-color: rgba(0, 104, 255, 0.4);
+  background: rgba(0, 104, 255, 0.08);
+  color: #38bdf8;
+}
+
+.pcZaloChatBtn:hover {
+  border-color: #0068ff;
+  background: rgba(0, 104, 255, 0.18);
+  color: #ffffff;
 }
 
 .pcAddCartBtn {

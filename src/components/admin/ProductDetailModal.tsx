@@ -274,7 +274,7 @@ export default function ProductDetailModal({ productId, onClose }: ProductDetail
               <div className={styles.section}>
                 <h3 className={styles.sectionTitle}>Mô Tả Sản Phẩm</h3>
                 {product.description?.trim() ? (
-                  /<\/?(p|div|br|img|h[1-6]|ul|ol|li|span|table|hr|s|blockquote|strong|b|em|i)\b/i.test(product.description) ? (
+                  /<\/?(p|div|br|img|video|source|iframe|h[1-6]|ul|ol|li|span|table|hr|s|blockquote|strong|b|em|i)\b/i.test(product.description) ? (
                     <div
                       className={styles.descriptionBox}
                       dangerouslySetInnerHTML={{ __html: product.description }}

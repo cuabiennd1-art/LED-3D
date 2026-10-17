@@ -19,6 +19,7 @@ import {
   FiShield,
   FiArrowRight,
 } from 'react-icons/fi';
+import { SiZalo } from 'react-icons/si';
 import toast from 'react-hot-toast';
 import { formatPrice } from '@/lib/utils';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -34,6 +35,8 @@ function OrderSuccessContent() {
   const isPaidQuery = searchParams.get('paid') === 'true';
   const { theme } = useTheme();
   const { removeCheckedOutItems } = useCart();
+
+  const cleanZaloPhone = (theme?.socialLinks?.zaloPhone || '').replace(/[^0-9]/g, '');
 
   const [order, setOrder] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
@@ -419,13 +422,26 @@ function OrderSuccessContent() {
                   <span>Theo Dõi Đơn Hàng</span>
                 </Link>
 
-                <Link
-                  href={`/chat?order=${encodeURIComponent(orderCode)}`}
-                  className={styles.chatBtn}
-                >
-                  <FiMessageSquare size={16} />
-                  <span>Liên Hệ Hỗ Trợ Đơn Này</span>
-                </Link>
+                {cleanZaloPhone ? (
+                  <a
+                    href={`https://zalo.me/${cleanZaloPhone}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={styles.chatBtn}
+                    title={`Chat Zalo (${cleanZaloPhone})`}
+                  >
+                    <SiZalo size={16} />
+                    <span>Hỗ Trợ Zalo Cho Đơn Này</span>
+                  </a>
+                ) : (
+                  <Link
+                    href={`/chat?order=${encodeURIComponent(orderCode)}`}
+                    className={styles.chatBtn}
+                  >
+                    <FiMessageSquare size={16} />
+                    <span>Liên Hệ Hỗ Trợ Đơn Này</span>
+                  </Link>
+                )}
               </div>
 
               {/* Trust Section */}

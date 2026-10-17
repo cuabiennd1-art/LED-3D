@@ -910,7 +910,79 @@ export default function AdminSettingsPage() {
                   />
                 </div>
 
-                {/* Social Links Section */}
+                {/* Social Links & Zalo Contact Section */}
+                <div className={styles.sectionHeader} style={{ marginTop: 28, paddingTop: 18, borderTop: '1px solid var(--border-color, #232838)' }}>
+                  <div>
+                    <h3 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 18 }}>💬</span>
+                      <span>Kênh Liên Hệ & Chat Zalo 1:1</span>
+                    </h3>
+                    <p>Cài đặt số điện thoại Zalo để khách hàng bấm Chat 1:1 trực tiếp từ trang chi tiết sản phẩm</p>
+                  </div>
+                </div>
+
+                <div className={styles.fieldGrid}>
+                  <div className={styles.formGroup} style={{ gridColumn: '1 / -1' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span style={{ fontWeight: 700, color: '#38bdf8' }}>
+                        📱 Số điện thoại Zalo (Chat 1:1)
+                      </span>
+                      <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 4, background: '#0284c7', color: '#fff', fontWeight: 600 }}>
+                        Khuyên dùng
+                      </span>
+                    </label>
+                    <input
+                      type="text"
+                      className={styles.input}
+                      placeholder="Ví dụ: 0988888888 (Khách bấm Chat sẽ mở Zalo nhắn tin trực tiếp)"
+                      value={theme.socialLinks?.zaloPhone || ''}
+                      onChange={(e) => {
+                        const updated: ThemeConfig = {
+                          ...theme,
+                          socialLinks: { ...theme.socialLinks, zaloPhone: e.target.value },
+                        };
+                        setTheme(updated);
+                      }}
+                    />
+                    <span style={{ fontSize: 11.5, color: 'var(--text-muted, #94a3b8)', marginTop: 4 }}>
+                      Khi khách hàng xem sản phẩm và bấm nút <strong>&quot;Chat&quot; / &quot;Chat Zalo&quot;</strong> trên cả điện thoại và máy tính, hệ thống sẽ mở trực tiếp khung chat Zalo 1:1 với số này (link <code>https://zalo.me/số_điện_thoại</code>).
+                    </span>
+                  </div>
+
+                  <div className={styles.formGroup}>
+                    <label>Link Fanpage Facebook (Tùy chọn)</label>
+                    <input
+                      type="text"
+                      className={styles.input}
+                      placeholder="https://facebook.com/ten-trang"
+                      value={theme.socialLinks?.facebookUrl || ''}
+                      onChange={(e) => {
+                        const updated: ThemeConfig = {
+                          ...theme,
+                          socialLinks: { ...theme.socialLinks, facebookUrl: e.target.value },
+                        };
+                        setTheme(updated);
+                      }}
+                    />
+                  </div>
+
+                  <div className={styles.formGroup}>
+                    <label>Link Kênh TikTok (Tùy chọn)</label>
+                    <input
+                      type="text"
+                      className={styles.input}
+                      placeholder="https://tiktok.com/@ten-kenh"
+                      value={theme.socialLinks?.tiktokUrl || ''}
+                      onChange={(e) => {
+                        const updated: ThemeConfig = {
+                          ...theme,
+                          socialLinks: { ...theme.socialLinks, tiktokUrl: e.target.value },
+                        };
+                        setTheme(updated);
+                      }}
+                    />
+                  </div>
+                </div>
               </>
             )}
 

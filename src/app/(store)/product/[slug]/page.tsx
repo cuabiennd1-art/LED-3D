@@ -28,7 +28,9 @@ import {
   FiRefreshCw,
   FiMaximize2,
   FiUser,
+  FiHome,
 } from 'react-icons/fi';
+import { SiZalo } from 'react-icons/si';
 import toast from 'react-hot-toast';
 import { formatPrice } from '@/lib/utils';
 import { useCart } from '@/contexts/CartContext';
@@ -56,6 +58,15 @@ export default function ProductDetailPage() {
 
   const [product, setProduct] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Format Zalo 1:1 Chat URL from Admin Settings
+  const cleanZaloPhone = useMemo(() => {
+    return (theme?.socialLinks?.zaloPhone || '').replace(/[^0-9]/g, '');
+  }, [theme?.socialLinks?.zaloPhone]);
+
+  const zaloChatUrl = cleanZaloPhone
+    ? `https://zalo.me/${cleanZaloPhone}`
+    : `/chat?product=${product?.slug || ''}`;
 
   // Handle Safe Back Navigation
   const handleBack = () => {
@@ -714,7 +725,7 @@ export default function ProductDetailPage() {
     const raw =
       content ||
       'Chất liệu cao cấp, đường may tỉ mỉ, form dáng chuẩn thời trang hiện đại.\nThiết kế trẻ trung năng động, dễ phối đồ phù hợp đi học, đi chơi, đi làm.';
-    const hasHtml = /<\/?(p|div|br|img|h[1-6]|ul|ol|li|strong|b|em|i|s|span|figure|table|hr|blockquote)\b/i.test(raw);
+    const hasHtml = /<\/?(p|div|br|img|video|source|iframe|h[1-6]|ul|ol|li|strong|b|em|i|s|span|figure|table|hr|blockquote)\b/i.test(raw);
 
     if (hasHtml) {
       return (
@@ -772,13 +783,24 @@ export default function ProductDetailPage() {
       <div className={styles.mobileView}>
         {/* Fixed Top Navigation */}
         <nav className={styles.mobileTopNav}>
-          <button
-            className={styles.navBtn}
-            onClick={handleBack}
-            aria-label="Quay lại"
-          >
-            <FiChevronLeft size={22} />
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <button
+              className={styles.navBtn}
+              onClick={handleBack}
+              aria-label="Quay lại"
+              title="Quay lại"
+            >
+              <FiChevronLeft size={22} />
+            </button>
+            <Link
+              href="/"
+              className={styles.navBtn}
+              aria-label="Trang chủ"
+              title="Về trang chủ"
+            >
+              <FiHome size={19} />
+            </Link>
+          </div>
 
           <div className={styles.navTitle}>Chi tiết sản phẩm</div>
 
@@ -1195,16 +1217,34 @@ export default function ProductDetailPage() {
         {/* Mobile Fixed Bottom Action Bar */}
         <div className={styles.mobileBottomBar}>
           <Link
-            href={`/chat?product=${product.slug || ''}`}
+            href="/"
             className={styles.actionIconBtn}
+            title="Quay lại trang chủ"
           >
-            <FiMessageSquare size={18} />
-            <span>Chat</span>
+            <FiHome size={18} />
+            <span>Trang chủ</span>
           </Link>
-          <Link href={`/product/${product.slug}/reviews`} className={styles.actionIconBtn}>
+
+          <a
+            href={zaloChatUrl}
+            target={cleanZaloPhone ? '_blank' : undefined}
+            rel={cleanZaloPhone ? 'noopener noreferrer' : undefined}
+            className={styles.actionIconBtn}
+            title={cleanZaloPhone ? `Chat Zalo 1:1 với Shop (${cleanZaloPhone})` : 'Chat với Shop'}
+          >
+            {cleanZaloPhone ? (
+              <SiZalo size={18} color="#0068FF" />
+            ) : (
+              <FiMessageSquare size={18} />
+            )}
+            <span>{cleanZaloPhone ? 'Chat Zalo' : 'Chat'}</span>
+          </a>
+
+          <Link href={`/product/${product.slug}/reviews`} className={styles.actionIconBtn} title="Xem đánh giá">
             <FiStar size={18} />
             <span>Đánh giá</span>
           </Link>
+
           <button
             type="button"
             className={styles.addCartBtn}
@@ -1232,7 +1272,7 @@ export default function ProductDetailPage() {
       <div className={styles.pcView}>
         {/* Top PC Nav - Centered Product Name */}
         <nav className={styles.pcTopNav}>
-          <div className={styles.topNavLeft}>
+          <div className={styles.topNavLeft} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
             <button
               className={styles.navBtn}
               onClick={handleBack}
@@ -1241,6 +1281,14 @@ export default function ProductDetailPage() {
             >
               <FiChevronLeft size={22} />
             </button>
+            <Link
+              href="/"
+              className={styles.navBtn}
+              aria-label="Trang chủ"
+              title="Về trang chủ"
+            >
+              <FiHome size={19} />
+            </Link>
           </div>
 
           <h1 className={styles.pcNavTitle} title={product.name}>
@@ -1536,14 +1584,20 @@ export default function ProductDetailPage() {
 
             {/* Desktop Action Buttons */}
             <div className={styles.pcActionButtons}>
-              <Link
-                href={`/chat?product=${product.slug || ''}`}
-                className={styles.pcChatBtn}
-                title="Chat với Shop"
+              <a
+                href={zaloChatUrl}
+                target={cleanZaloPhone ? '_blank' : undefined}
+                rel={cleanZaloPhone ? 'noopener noreferrer' : undefined}
+                className={`${styles.pcChatBtn} ${cleanZaloPhone ? styles.pcZaloChatBtn : ''}`}
+                title={cleanZaloPhone ? `Chat Zalo 1:1 với Shop (${cleanZaloPhone})` : 'Chat với Shop'}
               >
-                <FiMessageSquare size={17} />
-                <span>Chat Ngay</span>
-              </Link>
+                {cleanZaloPhone ? (
+                  <SiZalo size={19} color="#0068FF" />
+                ) : (
+                  <FiMessageSquare size={17} />
+                )}
+                <span>{cleanZaloPhone ? 'Chat Zalo' : 'Chat Ngay'}</span>
+              </a>
 
               <button
                 type="button"

@@ -27,6 +27,7 @@ import {
   FiTag,
   FiRotateCcw,
   FiMaximize2,
+  FiVideo,
 } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import { apiFetch } from '@/lib/api';
@@ -102,7 +103,7 @@ function normalizeToHtml(content: string): string {
   const trimmed = content.trim();
   if (!trimmed) return '';
 
-  const hasHtmlTags = /<\/?(p|div|br|img|h[1-6]|ul|ol|li|span|strong|b|em|i|s|blockquote|table|figure|hr)\b/i.test(trimmed);
+  const hasHtmlTags = /<\/?(p|div|br|img|video|source|iframe|h[1-6]|ul|ol|li|span|strong|b|em|i|s|blockquote|table|figure|hr)\b/i.test(trimmed);
   if (hasHtmlTags) {
     return trimmed;
   }
@@ -122,6 +123,7 @@ export default function ProductDescriptionEditor({
   const [isUploading, setIsUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<string>('');
   const [showUrlModal, setShowUrlModal] = useState(false);
+  const [urlMediaType, setUrlMediaType] = useState<'image' | 'video' | 'youtube'>('image');
   const [imageUrlInput, setImageUrlInput] = useState('');
   const [imageAltInput, setImageAltInput] = useState('');
 
@@ -141,6 +143,7 @@ export default function ProductDescriptionEditor({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const editorRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const videoFileInputRef = useRef<HTMLInputElement | null>(null);
   const savedSelectionRef = useRef<Range | null>(null);
   const lastHtmlRef = useRef<string>('');
 
@@ -254,20 +257,20 @@ export default function ProductDescriptionEditor({
     return () => document.removeEventListener('mousedown', handleDocumentMouseDown);
   }, [selectedImage]);
 
-  // Handle Click inside Editor to select or deselect image
+  // Handle Click inside Editor to select or deselect image / video
   const handleEditorClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement;
-    if (target && target.tagName === 'IMG') {
+    if (target && (target.tagName === 'IMG' || target.tagName === 'VIDEO')) {
       e.stopPropagation();
-      const img = target as HTMLImageElement;
+      const media = target as HTMLImageElement;
 
-      if (selectedImage && selectedImage !== img) {
+      if (selectedImage && selectedImage !== media) {
         selectedImage.classList.remove('editor-img-selected');
       }
 
-      img.classList.add('editor-img-selected');
-      setSelectedImage(img);
-      updateDeleteBtnPosition(img);
+      media.classList.add('editor-img-selected');
+      setSelectedImage(media);
+      updateDeleteBtnPosition(media);
     } else {
       if (selectedImage) {
         selectedImage.classList.remove('editor-img-selected');
@@ -284,7 +287,7 @@ export default function ProductDescriptionEditor({
     }
   };
 
-  // Delete the currently selected image
+  // Delete the currently selected image or video
   const handleDeleteSelectedImage = (e?: React.MouseEvent) => {
     if (e) {
       e.preventDefault();
@@ -299,7 +302,7 @@ export default function ProductDescriptionEditor({
       parent &&
       parent !== editorRef.current &&
       parent.textContent?.trim() === '' &&
-      parent.querySelectorAll('img').length <= 1;
+      parent.querySelectorAll('img, video').length <= 1;
 
     if (isSoleChild && parent) {
       parent.remove();
@@ -307,10 +310,11 @@ export default function ProductDescriptionEditor({
       selectedImage.remove();
     }
 
+    const isVideo = selectedImage.tagName === 'VIDEO';
     setSelectedImage(null);
     setDeleteBtnPos(null);
     handleEditorInput();
-    toast.success('Đã xóa hình ảnh khỏi mô tả');
+    toast.success(isVideo ? 'Đã xóa video khỏi mô tả' : 'Đã xóa hình ảnh khỏi mô tả');
   };
 
   // Change image width (100%, 75%, 50%, 33%)
@@ -704,6 +708,40 @@ export default function ProductDescriptionEditor({
     insertHtmlAtCursorOrBottom(figureHtml);
   };
 
+  // Insert video element (HTML5 video or YouTube iframe embed) at cursor or bottom
+  const insertVideoElement = (src: string, isYouTube: boolean = false) => {
+    let videoHtml = '';
+    if (isYouTube) {
+      videoHtml = `
+        <div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; max-width: 100%; border-radius: 12px; margin: 16px auto; box-shadow: 0 4px 16px rgba(0,0,0,0.15);">
+          <iframe 
+            src="${src}" 
+            title="Video mô tả sản phẩm" 
+            style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0; border-radius: 12px;" 
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+            allowfullscreen
+          ></iframe>
+        </div>
+        <p><br></p>
+      `;
+    } else {
+      videoHtml = `
+        <p style="text-align: center; margin: 16px 0;">
+          <video 
+            src="${src}" 
+            controls 
+            preload="metadata" 
+            playsinline 
+            style="max-width: 100%; height: auto; border-radius: 12px; display: inline-block; box-shadow: 0 4px 16px rgba(0,0,0,0.15);"
+          ></video>
+        </p>
+        <p><br></p>
+      `;
+    }
+
+    insertHtmlAtCursorOrBottom(videoHtml);
+  };
+
   // Upload image files via /api/upload
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -746,7 +784,59 @@ export default function ProductDescriptionEditor({
     }
   };
 
-  // Handle URL Insert Confirmation
+  // Upload video files via /api/upload (Saved directly into MongoDB Atlas)
+  const handleVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setIsUploading(true);
+    let successCount = 0;
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
+      setUploadStatus(`Đang tải video "${file.name}" (${sizeMb} MB) lưu vào CSDL MongoDB...`);
+
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const res = await apiFetch('/api/upload', {
+          method: 'POST',
+          body: formData,
+        });
+
+        const data = await res.json();
+        if (data.success && data.data?.url) {
+          insertVideoElement(data.data.url, false);
+          successCount++;
+        } else {
+          toast.error(data.message || `Lỗi khi tải video ${file.name}`);
+        }
+      } catch (err: any) {
+        toast.error(`Không thể upload video ${file.name}: ${err.message || 'Lỗi mạng'}`);
+      }
+    }
+
+    setIsUploading(false);
+    setUploadStatus('');
+    if (videoFileInputRef.current) videoFileInputRef.current.value = '';
+
+    if (successCount > 0) {
+      toast.success(`Đã chèn ${successCount} video vào mô tả thành công!`);
+    }
+  };
+
+  // Helper to extract YouTube embed URL
+  const formatYouTubeEmbedUrl = (url: string): string | null => {
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+    const match = url.match(regExp);
+    return match && match[2].length === 11
+      ? `https://www.youtube.com/embed/${match[2]}`
+      : null;
+  };
+
+  // Handle URL Insert Confirmation (Image or Video)
   const handleConfirmUrl = (e?: React.MouseEvent | React.KeyboardEvent) => {
     if (e) {
       e.preventDefault();
@@ -754,15 +844,31 @@ export default function ProductDescriptionEditor({
     }
     const cleanUrl = imageUrlInput.trim();
     if (!cleanUrl) {
-      toast.error('Vui lòng nhập link ảnh hợp lệ');
+      toast.error('Vui lòng nhập link hợp lệ');
       return;
     }
 
-    insertImageElement(cleanUrl, imageAltInput.trim());
+    const ytEmbed = formatYouTubeEmbedUrl(cleanUrl);
+    const isDirectVideo = /\.(mp4|webm|ogg|mov|m4v)(\?.*)?$/i.test(cleanUrl);
+
+    if (urlMediaType === 'youtube' || ytEmbed) {
+      if (!ytEmbed) {
+        toast.error('Đường dẫn YouTube không đúng định dạng');
+        return;
+      }
+      insertVideoElement(ytEmbed, true);
+      toast.success('Đã chèn video YouTube vào mô tả thành công!');
+    } else if (urlMediaType === 'video' || isDirectVideo) {
+      insertVideoElement(cleanUrl, false);
+      toast.success('Đã chèn video vào mô tả thành công!');
+    } else {
+      insertImageElement(cleanUrl, imageAltInput.trim());
+      toast.success('Đã chèn ảnh vào mô tả thành công!');
+    }
+
     setImageUrlInput('');
     setImageAltInput('');
     setShowUrlModal(false);
-    toast.success('Đã chèn ảnh vào mô tả thành công!');
   };
 
   // Handle Clipboard Paste (Supports Direct Image Paste from Screenshots)
@@ -1409,7 +1515,7 @@ export default function ProductDescriptionEditor({
 
           <div className={styles.divider} />
 
-          {/* Image Insertion Group */}
+          {/* Media Insertion Group: Image & Video */}
           <div className={styles.toolGroup}>
             <button
               type="button"
@@ -1423,7 +1529,22 @@ export default function ProductDescriptionEditor({
               title="Tải ảnh từ máy tính chèn xen kẽ vào bài viết"
             >
               <FiUploadCloud size={15} />
-              <span>{isUploading ? 'Đang tải...' : 'Upload ảnh xen kẽ'}</span>
+              <span>{isUploading ? 'Đang tải...' : 'Upload ảnh'}</span>
+            </button>
+
+            <button
+              type="button"
+              className={styles.uploadVideoBtn}
+              onMouseDown={saveSelection}
+              onClick={() => {
+                saveSelection();
+                videoFileInputRef.current?.click();
+              }}
+              disabled={isUploading}
+              title="Tải video từ máy tính lưu vào CSDL MongoDB và chèn xen kẽ vào bài viết"
+            >
+              <FiVideo size={15} />
+              <span>{isUploading ? 'Đang tải...' : 'Upload video'}</span>
             </button>
 
             <button
@@ -1434,13 +1555,13 @@ export default function ProductDescriptionEditor({
                 saveSelection();
                 setShowUrlModal(true);
               }}
-              title="Chèn ảnh qua đường dẫn link URL"
+              title="Chèn ảnh hoặc video qua đường dẫn link URL / YouTube"
             >
               <FiLink size={13} />
-              <span>Link ảnh</span>
+              <span>Link Ảnh/Video</span>
             </button>
 
-            {/* Hidden Multi-file input */}
+            {/* Hidden Multi-image input */}
             <input
               type="file"
               ref={fileInputRef}
@@ -1448,6 +1569,16 @@ export default function ProductDescriptionEditor({
               accept="image/*"
               multiple
               onChange={handleFileUpload}
+            />
+
+            {/* Hidden Multi-video input */}
+            <input
+              type="file"
+              ref={videoFileInputRef}
+              style={{ display: 'none' }}
+              accept="video/mp4,video/webm,video/ogg,video/quicktime,video/*"
+              multiple
+              onChange={handleVideoUpload}
             />
           </div>
         </div>
@@ -1623,24 +1754,65 @@ export default function ProductDescriptionEditor({
         />
       )}
 
-      {/* 7. Modal: Insert Image by URL */}
+      {/* 7. Modal: Insert Image or Video by URL */}
       {showUrlModal && (
         <div className={styles.urlPromptOverlay} onClick={() => setShowUrlModal(false)}>
           <div className={styles.urlPromptBox} onClick={(e) => e.stopPropagation()}>
             <h4 className={styles.urlPromptTitle}>
-              <FiImage color="var(--primary, #3b82f6)" />
-              <span>Chèn ảnh từ đường dẫn URL</span>
+              {urlMediaType === 'image' && <FiImage color="var(--primary, #3b82f6)" />}
+              {urlMediaType === 'video' && <FiVideo color="#a855f7" />}
+              {urlMediaType === 'youtube' && <span style={{ color: '#ef4444' }}>▶️</span>}
+              <span>Chèn Media từ đường dẫn URL</span>
             </h4>
+
+            {/* Media Type Tabs */}
+            <div style={{ display: 'flex', gap: 6, marginBottom: 4 }}>
+              <button
+                type="button"
+                className={`${styles.tabBtn} ${urlMediaType === 'image' ? styles.activeTabBtn : ''}`}
+                style={{ flex: 1, justifyContent: 'center' }}
+                onClick={() => setUrlMediaType('image')}
+              >
+                <FiImage size={13} />
+                <span>Link Ảnh</span>
+              </button>
+              <button
+                type="button"
+                className={`${styles.tabBtn} ${urlMediaType === 'video' ? styles.activeTabBtn : ''}`}
+                style={{ flex: 1, justifyContent: 'center' }}
+                onClick={() => setUrlMediaType('video')}
+              >
+                <FiVideo size={13} />
+                <span>Video MP4</span>
+              </button>
+              <button
+                type="button"
+                className={`${styles.tabBtn} ${urlMediaType === 'youtube' ? styles.activeTabBtn : ''}`}
+                style={{ flex: 1, justifyContent: 'center' }}
+                onClick={() => setUrlMediaType('youtube')}
+              >
+                <span>▶️</span>
+                <span>YouTube</span>
+              </button>
+            </div>
 
             <div>
               <div style={{ marginBottom: 12 }}>
                 <label style={{ display: 'block', fontSize: 12, marginBottom: 6, color: 'var(--text-muted)' }}>
-                  Đường dẫn URL hình ảnh (bắt buộc)
+                  {urlMediaType === 'image' && 'Đường dẫn URL hình ảnh (bắt buộc)'}
+                  {urlMediaType === 'video' && 'Đường dẫn URL video MP4 / WebM (bắt buộc)'}
+                  {urlMediaType === 'youtube' && 'Link video YouTube (VD: https://youtube.com/watch?v=... hoặc https://youtu.be/...)'}
                 </label>
                 <input
                   type="text"
                   className={styles.urlInput}
-                  placeholder="https://example.com/hinh-anh.jpg hoặc /uploads/..."
+                  placeholder={
+                    urlMediaType === 'image'
+                      ? 'https://example.com/hinh-anh.jpg hoặc /uploads/...'
+                      : urlMediaType === 'video'
+                      ? 'https://example.com/video.mp4 hoặc /uploads/...'
+                      : 'https://www.youtube.com/watch?v=...'
+                  }
                   value={imageUrlInput}
                   onChange={(e) => setImageUrlInput(e.target.value)}
                   onKeyDown={(e) => {
@@ -1653,24 +1825,26 @@ export default function ProductDescriptionEditor({
                 />
               </div>
 
-              <div style={{ marginBottom: 16 }}>
-                <label style={{ display: 'block', fontSize: 12, marginBottom: 6, color: 'var(--text-muted)' }}>
-                  Chú thích ảnh / Alt text (tùy chọn)
-                </label>
-                <input
-                  type="text"
-                  className={styles.urlInput}
-                  placeholder="Mô tả ngắn gọn về hình ảnh..."
-                  value={imageAltInput}
-                  onChange={(e) => setImageAltInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      handleConfirmUrl(e);
-                    }
-                  }}
-                />
-              </div>
+              {urlMediaType === 'image' && (
+                <div style={{ marginBottom: 16 }}>
+                  <label style={{ display: 'block', fontSize: 12, marginBottom: 6, color: 'var(--text-muted)' }}>
+                    Chú thích ảnh / Alt text (tùy chọn)
+                  </label>
+                  <input
+                    type="text"
+                    className={styles.urlInput}
+                    placeholder="Mô tả ngắn gọn về hình ảnh..."
+                    value={imageAltInput}
+                    onChange={(e) => setImageAltInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleConfirmUrl(e);
+                      }
+                    }}
+                  />
+                </div>
+              )}
 
               <div className={styles.urlPromptActions}>
                 <button

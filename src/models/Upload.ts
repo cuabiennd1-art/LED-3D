@@ -5,7 +5,8 @@ export interface IUpload extends Document {
   originalName: string;
   mimeType: string;
   size: number;
-  data: string; // Base64 data string
+  data: string; // Base64 data string (for small files)
+  isGridFs?: boolean; // True if stored in MongoDB GridFS
   createdAt: Date;
   updatedAt: Date;
 }
@@ -16,7 +17,8 @@ const UploadSchema = new Schema<IUpload>(
     originalName: { type: String, default: '' },
     mimeType: { type: String, default: 'image/jpeg' },
     size: { type: Number, default: 0 },
-    data: { type: String, required: true },
+    data: { type: String, default: '' },
+    isGridFs: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

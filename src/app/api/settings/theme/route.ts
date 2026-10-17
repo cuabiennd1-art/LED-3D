@@ -36,10 +36,11 @@ export interface IThemeConfig {
   // 3.1. Sub Banners (2 side banners for PC desktop)
   subBanners?: IBannerSlide[];
 
-  // 4. Social Links (TikTok, Facebook)
+  // 4. Social Links (TikTok, Facebook, Zalo)
   socialLinks: {
     tiktokUrl: string; // Link kênh TikTok
     facebookUrl: string; // Link Fanpage Facebook
+    zaloPhone?: string; // Số điện thoại Zalo Chat 1:1
   };
 
   // 5. Màu sắc Button (Nút bấm)
@@ -131,6 +132,7 @@ export const defaultThemeConfig: IThemeConfig = {
   socialLinks: {
     tiktokUrl: '',
     facebookUrl: '',
+    zaloPhone: '',
   },
   buttonColors: {
     primaryBg: '#3b82f6',

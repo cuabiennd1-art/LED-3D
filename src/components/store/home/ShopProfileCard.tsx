@@ -15,6 +15,8 @@ import {
   FiMapPin,
   FiBriefcase,
 } from 'react-icons/fi';
+import { SiZalo } from 'react-icons/si';
+import { useTheme } from '@/contexts/ThemeContext';
 import styles from '@/app/(store)/demo/page.module.css';
 
 interface ShopProfileCardProps {
@@ -39,7 +41,10 @@ const ShopProfileCardComponent: React.FC<ShopProfileCardProps> = ({
   coverImages,
 }) => {
   const router = useRouter();
+  const { theme } = useTheme();
   const [avatarError, setAvatarError] = useState(false);
+
+  const cleanZaloPhone = (theme?.socialLinks?.zaloPhone || '').replace(/[^0-9]/g, '');
 
   useEffect(() => {
     setAvatarError(false);
@@ -192,10 +197,17 @@ const ShopProfileCardComponent: React.FC<ShopProfileCardProps> = ({
             <button
               type="button"
               className={styles.btnShopeeChat}
-              onClick={() => router.push('/chat')}
+              onClick={() => {
+                if (cleanZaloPhone) {
+                  window.open(`https://zalo.me/${cleanZaloPhone}`, '_blank', 'noopener,noreferrer');
+                } else {
+                  router.push('/chat');
+                }
+              }}
+              title={cleanZaloPhone ? `Chat Zalo (${cleanZaloPhone})` : 'Chat với Shop'}
             >
-              <FiMessageSquare size={13} />
-              <span>Chat</span>
+              {cleanZaloPhone ? <SiZalo size={13} /> : <FiMessageSquare size={13} />}
+              <span>{cleanZaloPhone ? 'Chat Zalo' : 'Chat'}</span>
             </button>
           </div>
         </div>

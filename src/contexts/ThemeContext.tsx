@@ -30,6 +30,7 @@ export interface ThemeConfig {
   socialLinks: {
     tiktokUrl: string;
     facebookUrl: string;
+    zaloPhone?: string;
   };
   buttonColors: {
     primaryBg: string;
@@ -117,6 +118,7 @@ export const defaultTheme: ThemeConfig = {
   socialLinks: {
     tiktokUrl: '',
     facebookUrl: '',
+    zaloPhone: '',
   },
   buttonColors: {
     primaryBg: '#3b82f6',

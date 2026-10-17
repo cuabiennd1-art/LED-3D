@@ -1,7 +1,8 @@
 'use client';
 
-import React, { memo } from 'react';
+import React, { memo, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTheme } from '@/contexts/ThemeContext';
 import {
   QuickIconFreeship,
   QuickIconFlashSale,
@@ -26,6 +27,11 @@ const QuickHubComponent: React.FC<QuickHubProps> = ({
   onNavigateToProducts,
 }) => {
   const router = useRouter();
+  const { theme } = useTheme();
+
+  const cleanZaloPhone = useMemo(() => {
+    return (theme?.socialLinks?.zaloPhone || '').replace(/[^0-9]/g, '');
+  }, [theme?.socialLinks?.zaloPhone]);
 
   return (
     <div className={styles.quickHubGrid}>
@@ -109,12 +115,18 @@ const QuickHubComponent: React.FC<QuickHubProps> = ({
       <button
         type="button"
         className={styles.quickHubItem}
-        onClick={() => router.push('/chat')}
+        onClick={() => {
+          if (cleanZaloPhone) {
+            window.open(`https://zalo.me/${cleanZaloPhone}`, '_blank', 'noopener,noreferrer');
+          } else {
+            router.push('/chat');
+          }
+        }}
       >
         <div className={`${styles.quickIconWrap} ${styles.iconTransparent}`}>
           <QuickIconConsult />
         </div>
-        <span className={styles.quickHubLabel}>Tư Vấn Shop</span>
+        <span className={styles.quickHubLabel}>Tư Vấn Zalo</span>
       </button>
     </div>
   );
