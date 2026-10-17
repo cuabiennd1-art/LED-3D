@@ -911,6 +911,83 @@
   transform: translateY(-1px);
 }
 
+/* Reviews Pagination Controls */
+.productReviewsPagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 16px;
+  padding: 10px 12px;
+  background: var(--bg-card-hover, rgba(255, 255, 255, 0.03));
+  border-radius: 12px;
+  border: 1px solid var(--border-color, #232838);
+}
+
+.pageNavBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color, #232838);
+  background: var(--bg-main, #090a0f);
+  color: var(--text-main, #f8fafc);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.pageNavBtn:hover:not(:disabled) {
+  border-color: var(--primary, #ee4d2d);
+  color: var(--primary, #ee4d2d);
+  background: var(--bg-card, #13161f);
+}
+
+.pageNavDisabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.pageNumbersGroup {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pageNumberBtn {
+  min-width: 32px;
+  height: 32px;
+  padding: 0 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  border: 1px solid var(--border-color, #232838);
+  background: var(--bg-main, #090a0f);
+  color: var(--text-main, #f8fafc);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.pageNumberBtn:hover {
+  border-color: var(--primary, #ee4d2d);
+  color: var(--primary, #ee4d2d);
+}
+
+.pageNumberActive {
+  background: linear-gradient(135deg, #ee4d2d, #ff6b4a) !important;
+  color: #ffffff !important;
+  border-color: transparent !important;
+  box-shadow: 0 2px 8px rgba(238, 77, 45, 0.35);
+  font-weight: 700;
+}
+
 /* Mobile Fixed Bottom Bar */
 .mobileBottomBar {
   position: fixed;

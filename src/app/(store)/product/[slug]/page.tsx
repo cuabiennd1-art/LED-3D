@@ -128,13 +128,15 @@ export default function ProductDetailPage() {
     averageRating: 5.0,
     totalReviews: 0,
   });
-  const [isReviewsExpanded, setIsReviewsExpanded] = useState(false);
+  const [reviewsPage, setReviewsPage] = useState(1);
+  const reviewsPerPage = 10;
+  const totalReviewsPages = Math.max(1, Math.ceil(reviewsPreview.length / reviewsPerPage));
 
-  // Chỉ hiển thị 10 đánh giá mới nhất (ưu tiên số sao cao), bấm Xem thêm để mở rộng
+  // Chỉ hiển thị 10 đánh giá mới nhất theo cơ chế phân trang
   const displayedReviews = useMemo(() => {
-    if (isReviewsExpanded) return reviewsPreview;
-    return reviewsPreview.slice(0, 10);
-  }, [isReviewsExpanded, reviewsPreview]);
+    const start = (reviewsPage - 1) * reviewsPerPage;
+    return reviewsPreview.slice(start, start + reviewsPerPage);
+  }, [reviewsPage, reviewsPreview]);
 
   // Write Review Modal State
   const [isWriteModalOpen, setIsWriteModalOpen] = useState(false);
@@ -167,13 +169,11 @@ export default function ProductDetailPage() {
   const loadReviewsPreview = async () => {
     if (!params.slug) return;
     try {
-      const res = await apiFetch(`/api/reviews?slug=${encodeURIComponent(params.slug as string)}&limit=100`);
+      const res = await apiFetch(`/api/reviews?slug=${encodeURIComponent(params.slug as string)}&limit=100&sortBy=newest`);
       const data = await res.json();
       if (data.success) {
-        // Sắp xếp ưu tiên số sao cao nhất trước (5 -> 1), nếu bằng sao thì ưu tiên mới nhất
+        // Sắp xếp 10 đánh giá mới nhất lên trước
         const sorted = (data.data || []).sort((a: any, b: any) => {
-          const starDiff = (Number(b.rating) || 5) - (Number(a.rating) || 5);
-          if (starDiff !== 0) return starDiff;
           return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
         });
         setReviewsPreview(sorted);
@@ -1218,6 +1218,9 @@ export default function ProductDetailPage() {
               src={images[activeImageIndex] || images[0]}
               alt={product.name}
               className={styles.mobileMainImage}
+              onClick={() => setLightboxImage(images[activeImageIndex] || images[0])}
+              style={{ cursor: 'pointer' }}
+              title="Bấm để xem ảnh to full màn hình"
             />
             {images.length > 1 && (
               <>
@@ -1555,22 +1558,41 @@ export default function ProductDetailPage() {
                   ))}
                 </div>
 
-                {reviewsPreview.length > 10 && (
-                  <div className={styles.seeMoreReviewsWrap}>
+                {totalReviewsPages > 1 && (
+                  <div className={styles.productReviewsPagination}>
                     <button
                       type="button"
-                      className={styles.seeMoreReviewsBtn}
-                      onClick={() => setIsReviewsExpanded(!isReviewsExpanded)}
+                      className={`${styles.pageNavBtn} ${reviewsPage <= 1 ? styles.pageNavDisabled : ''}`}
+                      onClick={() => setReviewsPage((p) => Math.max(1, p - 1))}
+                      disabled={reviewsPage <= 1}
+                      aria-label="Trang trước"
                     >
-                      {isReviewsExpanded ? (
-                        <>
-                          Thu gọn đánh giá <FiChevronUp size={16} />
-                        </>
-                      ) : (
-                        <>
-                          Xem thêm {reviewsPreview.length - 10} đánh giá khác <FiChevronDown size={16} />
-                        </>
-                      )}
+                      <FiChevronLeft size={15} />
+                      <span>Trước</span>
+                    </button>
+
+                    <div className={styles.pageNumbersGroup}>
+                      {Array.from({ length: totalReviewsPages }, (_, i) => i + 1).map((p) => (
+                        <button
+                          key={p}
+                          type="button"
+                          className={`${styles.pageNumberBtn} ${p === reviewsPage ? styles.pageNumberActive : ''}`}
+                          onClick={() => setReviewsPage(p)}
+                        >
+                          {p}
+                        </button>
+                      ))}
+                    </div>
+
+                    <button
+                      type="button"
+                      className={`${styles.pageNavBtn} ${reviewsPage >= totalReviewsPages ? styles.pageNavDisabled : ''}`}
+                      onClick={() => setReviewsPage((p) => Math.min(totalReviewsPages, p + 1))}
+                      disabled={reviewsPage >= totalReviewsPages}
+                      aria-label="Trang sau"
+                    >
+                      <span>Sau</span>
+                      <FiChevronRight size={15} />
                     </button>
                   </div>
                 )}
@@ -1726,6 +1748,9 @@ export default function ProductDetailPage() {
                 src={images[activeImageIndex] || images[0]}
                 alt={product.name}
                 className={styles.pcMainImage}
+                onClick={() => setLightboxImage(images[activeImageIndex] || images[0])}
+                style={{ cursor: 'pointer' }}
+                title="Bấm để xem ảnh to full màn hình"
               />
 
               <div className={styles.badgeOverlay}>
@@ -2189,22 +2214,41 @@ export default function ProductDetailPage() {
                     ))}
                   </div>
 
-                  {reviewsPreview.length > 10 && (
-                    <div className={styles.seeMoreReviewsWrap}>
+                  {totalReviewsPages > 1 && (
+                    <div className={styles.productReviewsPagination}>
                       <button
                         type="button"
-                        className={styles.seeMoreReviewsBtn}
-                        onClick={() => setIsReviewsExpanded(!isReviewsExpanded)}
+                        className={`${styles.pageNavBtn} ${reviewsPage <= 1 ? styles.pageNavDisabled : ''}`}
+                        onClick={() => setReviewsPage((p) => Math.max(1, p - 1))}
+                        disabled={reviewsPage <= 1}
+                        aria-label="Trang trước"
                       >
-                        {isReviewsExpanded ? (
-                          <>
-                            Thu gọn đánh giá <FiChevronUp size={16} />
-                          </>
-                        ) : (
-                          <>
-                            Xem thêm {reviewsPreview.length - 10} đánh giá khác <FiChevronDown size={16} />
-                          </>
-                        )}
+                        <FiChevronLeft size={15} />
+                        <span>Trước</span>
+                      </button>
+
+                      <div className={styles.pageNumbersGroup}>
+                        {Array.from({ length: totalReviewsPages }, (_, i) => i + 1).map((p) => (
+                          <button
+                            key={p}
+                            type="button"
+                            className={`${styles.pageNumberBtn} ${p === reviewsPage ? styles.pageNumberActive : ''}`}
+                            onClick={() => setReviewsPage(p)}
+                          >
+                            {p}
+                          </button>
+                        ))}
+                      </div>
+
+                      <button
+                        type="button"
+                        className={`${styles.pageNavBtn} ${reviewsPage >= totalReviewsPages ? styles.pageNavDisabled : ''}`}
+                        onClick={() => setReviewsPage((p) => Math.min(totalReviewsPages, p + 1))}
+                        disabled={reviewsPage >= totalReviewsPages}
+                        aria-label="Trang sau"
+                      >
+                        <span>Sau</span>
+                        <FiChevronRight size={15} />
                       </button>
                     </div>
                   )}

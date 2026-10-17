@@ -9,6 +9,9 @@ import {
   FiShoppingCart,
   FiZap,
   FiCheck,
+  FiMaximize2,
+  FiChevronLeft,
+  FiChevronRight,
 } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import { formatPrice } from '@/lib/utils';
@@ -43,6 +46,9 @@ export default function ProductDetailModal({
   const [selectedAttributes, setSelectedAttributes] = useState<Record<string, string>>({});
   const [quantity, setQuantity] = useState(1);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+
+
 
   // Extract options
   const options: IProductOption[] = useMemo(() => {
@@ -252,6 +258,22 @@ export default function ProductDetailModal({
       ? product.images
       : ['https://images.unsplash.com/photo-1581655353564-df123a1eb820?w=400'];
 
+  // Close lightbox on Escape, navigate with arrow keys
+  useEffect(() => {
+    if (!isLightboxOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsLightboxOpen(false);
+      } else if (e.key === 'ArrowLeft') {
+        setActiveImageIndex((prev) => (prev > 0 ? prev - 1 : images.length - 1));
+      } else if (e.key === 'ArrowRight') {
+        setActiveImageIndex((prev) => (prev < images.length - 1 ? prev + 1 : 0));
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isLightboxOpen, images.length]);
+
   const isOptionValueAvailable = (optionName: string, value: string): boolean => {
     if (variants.length === 0) return true;
     const trialSelection = { ...selectedAttributes, [optionName]: value };
@@ -352,20 +374,31 @@ export default function ProductDetailModal({
   const selectedSummary = selectedValuesList.length > 0 ? selectedValuesList.join(', ') : '';
 
   return (
-    <div className={styles.overlay} onClick={onClose}>
-      <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-        {/* ===== 1. SHOPEE COMPACT PRODUCT HEADER ===== */}
-        <div className={styles.headerSummary}>
-          <div className={styles.thumbnailBox}>
-            <img
-              src={images[activeImageIndex] || images[0]}
-              alt={product.name}
-              className={styles.thumbnailImg}
-            />
-            {discountPercent && (
-              <span className={styles.thumbnailBadge}>-{discountPercent}%</span>
-            )}
-          </div>
+    <>
+      <div className={styles.overlay} onClick={onClose}>
+        <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+          {/* ===== 1. SHOPEE COMPACT PRODUCT HEADER ===== */}
+          <div className={styles.headerSummary}>
+            <div
+              className={styles.thumbnailBox}
+              onClick={() => setIsLightboxOpen(true)}
+              role="button"
+              tabIndex={0}
+              title="Bấm để xem ảnh to full màn hình"
+              aria-label="Xem ảnh phóng to full màn hình"
+            >
+              <img
+                src={images[activeImageIndex] || images[0]}
+                alt={product.name}
+                className={styles.thumbnailImg}
+              />
+              {discountPercent && (
+                <span className={styles.thumbnailBadge}>-{discountPercent}%</span>
+              )}
+              <div className={styles.zoomHintIcon} title="Phóng to">
+                <FiMaximize2 size={12} />
+              </div>
+            </div>
 
           <div className={styles.headerInfo}>
             <div className={styles.priceRow}>
@@ -514,5 +547,69 @@ export default function ProductDetailModal({
         </div>
       </div>
     </div>
+
+      {/* ===== FULLSCREEN LIGHTBOX MODAL ===== */}
+      {isLightboxOpen && (
+        <div
+          className={styles.lightboxOverlay}
+          onClick={() => setIsLightboxOpen(false)}
+        >
+          <button
+            type="button"
+            className={styles.closeLightboxBtn}
+            onClick={() => setIsLightboxOpen(false)}
+            aria-label="Đóng ảnh phóng to"
+            title="Đóng (Esc)"
+          >
+            <FiX size={24} />
+          </button>
+
+          <div
+            className={styles.lightboxContent}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img
+              src={images[activeImageIndex] || images[0]}
+              alt={product.name}
+              className={styles.lightboxImg}
+            />
+
+            {images.length > 1 && (
+              <>
+                <button
+                  type="button"
+                  className={`${styles.lightboxNavBtn} ${styles.lightboxNavPrev}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActiveImageIndex((prev) => (prev > 0 ? prev - 1 : images.length - 1));
+                  }}
+                  aria-label="Ảnh trước"
+                  title="Ảnh trước"
+                >
+                  <FiChevronLeft size={24} />
+                </button>
+
+                <button
+                  type="button"
+                  className={`${styles.lightboxNavBtn} ${styles.lightboxNavNext}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActiveImageIndex((prev) => (prev < images.length - 1 ? prev + 1 : 0));
+                  }}
+                  aria-label="Ảnh sau"
+                  title="Ảnh sau"
+                >
+                  <FiChevronRight size={24} />
+                </button>
+
+                <div className={styles.lightboxIndicator}>
+                  {activeImageIndex + 1} / {images.length}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+    </>
   );
 }

@@ -746,6 +746,100 @@
   cursor: pointer;
 }
 
+/* Pagination Controls */
+.paginationContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 20px 0 8px;
+  padding: 12px 14px;
+  background: var(--bg-card, #13161f);
+  border-radius: var(--radius-md, 12px);
+  border: 1px solid var(--border-color, #232838);
+  box-sizing: border-box;
+}
+
+.pageNavBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color, #232838);
+  background: var(--bg-main, #090a0f);
+  color: var(--text-main, #f8fafc);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.pageNavBtn:hover:not(:disabled) {
+  background: var(--bg-card-hover, #1a1e2b);
+  border-color: var(--primary, #ee4d2d);
+  color: var(--primary, #ee4d2d);
+}
+
+.pageNavDisabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.pageNumbersGroup {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.pageNumberBtn {
+  min-width: 36px;
+  height: 36px;
+  padding: 0 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  border: 1px solid var(--border-color, #232838);
+  background: var(--bg-main, #090a0f);
+  color: var(--text-main, #f8fafc);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.pageNumberBtn:hover {
+  border-color: var(--primary, #ee4d2d);
+  color: var(--primary, #ee4d2d);
+}
+
+.pageNumberActive {
+  background: linear-gradient(135deg, #ee4d2d, #ff6b4a) !important;
+  color: #ffffff !important;
+  border-color: transparent !important;
+  box-shadow: 0 4px 12px rgba(238, 77, 45, 0.35);
+  font-weight: 700;
+}
+
+.pageEllipsis {
+  color: var(--text-muted, #94a3b8);
+  font-size: 14px;
+  padding: 0 4px;
+}
+
+.paginationSummary {
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-muted, #94a3b8);
+  margin: 6px 0 16px;
+  font-weight: 500;
+}
+
 /* ==========================================================================
    PC & TABLET RESPONSIVE (>= 768px and >= 1024px)
    ========================================================================== */

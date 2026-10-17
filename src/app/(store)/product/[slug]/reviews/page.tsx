@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import {
   FiArrowLeft,
   FiChevronLeft,
+  FiChevronRight,
   FiStar,
   FiThumbsUp,
   FiUploadCloud,
@@ -78,6 +79,11 @@ export default function ProductReviewsPage() {
   const [loading, setLoading] = useState(true);
   const [activeFilterStar, setActiveFilterStar] = useState<string>('all'); // 'all' | '5' | '4' | '3' | '2' | '1' | 'hasImage'
 
+  // Pagination State (Chỉ hiển thị 10 đánh giá mới nhất mỗi trang)
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [totalPages, setTotalPages] = useState<number>(1);
+  const [totalFilteredReviews, setTotalFilteredReviews] = useState<number>(0);
+
   // Handle Safe Back Navigation
   const handleBack = () => {
     const fallbackUrl = slug ? `/product/${slug}` : '/';
@@ -144,12 +150,12 @@ export default function ProductReviewsPage() {
     loadProduct();
   }, [slug]);
 
-  // Fetch Reviews Data
-  const loadReviews = async () => {
+  // Fetch Reviews Data (10 đánh giá mới nhất mỗi trang, hỗ trợ phân trang)
+  const loadReviews = async (targetPage: number = currentPage) => {
     if (!slug) return;
     try {
       setLoading(true);
-      let url = `/api/reviews?slug=${encodeURIComponent(slug)}&limit=50`;
+      let url = `/api/reviews?slug=${encodeURIComponent(slug)}&page=${targetPage}&limit=10&sortBy=newest`;
       if (activeFilterStar === 'hasImage') {
         url += '&hasImage=true';
       } else if (['1', '2', '3', '4', '5'].includes(activeFilterStar)) {
@@ -164,6 +170,11 @@ export default function ProductReviewsPage() {
         if (data.stats) {
           setStats(data.stats);
         }
+        if (data.pagination) {
+          setTotalPages(data.pagination.totalPages || 1);
+          setTotalFilteredReviews(data.pagination.total ?? 0);
+          setCurrentPage(data.pagination.page || targetPage);
+        }
       }
     } catch (err) {
       console.error('Error loading reviews:', err);
@@ -173,8 +184,18 @@ export default function ProductReviewsPage() {
   };
 
   useEffect(() => {
-    loadReviews();
+    setCurrentPage(1);
+    loadReviews(1);
   }, [slug, activeFilterStar]);
+
+  const handlePageChange = (newPage: number) => {
+    if (newPage < 1 || newPage > totalPages || newPage === currentPage) return;
+    setCurrentPage(newPage);
+    loadReviews(newPage);
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 120, behavior: 'smooth' });
+    }
+  };
 
   // Handle Photo Upload (Hỗ trợ nhiều ảnh, nén ảnh nhẹ, fallback tức thì)
   const handleUploadPhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -579,6 +600,71 @@ export default function ProductReviewsPage() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* 6. PAGINATION CONTROLS (Chỉ hiển thị 10 đánh giá mới nhất mỗi trang) */}
+      {!loading && totalPages > 1 && (
+        <div className={styles.paginationContainer}>
+          <button
+            type="button"
+            className={`${styles.pageNavBtn} ${currentPage <= 1 ? styles.pageNavDisabled : ''}`}
+            onClick={() => handlePageChange(currentPage - 1)}
+            disabled={currentPage <= 1}
+            aria-label="Trang trước"
+          >
+            <FiChevronLeft size={16} />
+            <span>Trước</span>
+          </button>
+
+          <div className={styles.pageNumbersGroup}>
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => {
+              if (
+                totalPages <= 7 ||
+                p === 1 ||
+                p === totalPages ||
+                (p >= currentPage - 1 && p <= currentPage + 1)
+              ) {
+                return (
+                  <button
+                    key={p}
+                    type="button"
+                    className={`${styles.pageNumberBtn} ${p === currentPage ? styles.pageNumberActive : ''}`}
+                    onClick={() => handlePageChange(p)}
+                  >
+                    {p}
+                  </button>
+                );
+              } else if (
+                (p === currentPage - 2 && currentPage > 3) ||
+                (p === currentPage + 2 && currentPage < totalPages - 2)
+              ) {
+                return (
+                  <span key={p} className={styles.pageEllipsis}>
+                    ...
+                  </span>
+                );
+              }
+              return null;
+            })}
+          </div>
+
+          <button
+            type="button"
+            className={`${styles.pageNavBtn} ${currentPage >= totalPages ? styles.pageNavDisabled : ''}`}
+            onClick={() => handlePageChange(currentPage + 1)}
+            disabled={currentPage >= totalPages}
+            aria-label="Trang sau"
+          >
+            <span>Sau</span>
+            <FiChevronRight size={16} />
+          </button>
+        </div>
+      )}
+
+      {!loading && totalPages > 1 && (
+        <div className={styles.paginationSummary}>
+          Trang {currentPage} / {totalPages} (Tổng {totalFilteredReviews} đánh giá)
         </div>
       )}
 

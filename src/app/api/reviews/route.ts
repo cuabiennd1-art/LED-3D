@@ -71,17 +71,19 @@ export async function GET(request: Request) {
 
     const averageRating = totalReviews > 0 ? Number((sumRating / totalReviews).toFixed(1)) : 5.0;
 
-    const sortBy = searchParams.get('sortBy');
-    let sortOptions: any = { rating: -1, createdAt: -1 };
-    if (sortBy === 'newest') {
-      sortOptions = { createdAt: -1 };
-    } else if (sortBy === 'oldest') {
+    const sortBy = searchParams.get('sortBy') || 'newest';
+    let sortOptions: any = { createdAt: -1 };
+    if (sortBy === 'oldest') {
       sortOptions = { createdAt: 1 };
+    } else if (sortBy === 'rating_desc') {
+      sortOptions = { rating: -1, createdAt: -1 };
     } else if (sortBy === 'rating_asc') {
       sortOptions = { rating: 1, createdAt: -1 };
+    } else {
+      sortOptions = { createdAt: -1 };
     }
 
-    // Fetch paginated filtered reviews (Ưu tiên số sao cao nhất trước, rồi đến mới nhất)
+    // Fetch paginated filtered reviews (mặc định 10 đánh giá mới nhất trước)
     const totalFiltered = await Review.countDocuments(query);
     const reviews = await Review.find(query)
       .sort(sortOptions)
@@ -102,7 +104,7 @@ export async function GET(request: Request) {
         page,
         limit,
         total: totalFiltered,
-        totalPages: Math.ceil(totalFiltered / limit),
+        totalPages: Math.max(1, Math.ceil(totalFiltered / limit)),
       },
     });
   } catch (error: any) {
