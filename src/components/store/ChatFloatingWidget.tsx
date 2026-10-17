@@ -37,23 +37,24 @@ export default function ChatFloatingWidget() {
     return (theme?.socialLinks?.zaloPhone || '').replace(/[^0-9]/g, '');
   }, [theme?.socialLinks?.zaloPhone]);
 
-  // Compute default bottom-right position inside viewport
+  // Compute default bottom-right position inside viewport (exact 48px circle like original)
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
     const computeDefaultPosition = () => {
       const isMobile = window.innerWidth < 768;
-      const btnSize = 52;
+      const btnWidth = 48;
+      const btnHeight = 48;
 
-      const defaultX = window.innerWidth - btnSize - (isMobile ? 16 : 24);
-      const defaultY = window.innerHeight - btnSize - (isMobile ? 96 : 32);
+      const defaultX = window.innerWidth - btnWidth - (isMobile ? 16 : 24);
+      const defaultY = window.innerHeight - btnHeight - (isMobile ? 96 : 30);
 
       setPosition((prev) => {
         if (prev === null) {
           return { x: Math.max(8, defaultX), y: Math.max(20, defaultY) };
         }
-        const clampedX = Math.max(8, Math.min(prev.x, window.innerWidth - btnSize - 8));
-        const clampedY = Math.max(20, Math.min(prev.y, window.innerHeight - btnSize - (isMobile ? 80 : 20)));
+        const clampedX = Math.max(8, Math.min(prev.x, window.innerWidth - btnWidth - 8));
+        const clampedY = Math.max(20, Math.min(prev.y, window.innerHeight - btnHeight - (isMobile ? 80 : 20)));
         return { x: clampedX, y: clampedY };
       });
     };
@@ -91,9 +92,10 @@ export default function ChatFloatingWidget() {
         const nextY = dragStartRef.current.initialY + dy;
 
         const isMobile = window.innerWidth < 768;
-        const btnSize = 52;
-        const clampedX = Math.max(8, Math.min(nextX, window.innerWidth - btnSize - 8));
-        const clampedY = Math.max(20, Math.min(nextY, window.innerHeight - btnSize - (isMobile ? 80 : 20)));
+        const btnWidth = 48;
+        const btnHeight = 48;
+        const clampedX = Math.max(8, Math.min(nextX, window.innerWidth - btnWidth - 8));
+        const clampedY = Math.max(20, Math.min(nextY, window.innerHeight - btnHeight - (isMobile ? 80 : 20)));
 
         setPosition({ x: clampedX, y: clampedY });
       }
@@ -145,41 +147,24 @@ export default function ChatFloatingWidget() {
         transition: isDragging ? 'none' : 'opacity 0.2s ease',
       }}
     >
-      <div className={styles.zaloActionContainer}>
-        {/* Tooltip / Label Badge */}
-        <div
-          className={styles.zaloTooltip}
-          onClick={handleOpenZalo}
-          title={cleanZaloPhone ? `Chat Zalo (${cleanZaloPhone})` : 'Chat Zalo với Shop'}
-        >
-          <span className={styles.pulseDot} />
-          <span className={styles.tooltipText}>Chat Zalo</span>
-        </div>
-
-        {/* Floating Zalo Button */}
-        <button
-          ref={btnRef}
-          type="button"
-          className={styles.floatingBtn}
-          onClick={handleOpenZalo}
-          onMouseDown={(e) => startDrag(e.clientX, e.clientY)}
-          onTouchStart={(e) => {
-            if (e.touches.length > 0) {
-              startDrag(e.touches[0].clientX, e.touches[0].clientY);
-            }
-          }}
-          aria-label="Chat Zalo 1:1 với Shop"
-          title={cleanZaloPhone ? `Chat Zalo 1:1 (${cleanZaloPhone})` : 'Chat Zalo với Shop'}
-        >
-          {/* Animated Glowing Wave Rings */}
-          <span className={styles.waveRing1} />
-          <span className={styles.waveRing2} />
-
-          <span className={styles.floatingIcon}>
-            <SiZalo size={28} />
-          </span>
-        </button>
-      </div>
+      <button
+        ref={btnRef}
+        type="button"
+        className={styles.floatingBtn}
+        onClick={handleOpenZalo}
+        onMouseDown={(e) => startDrag(e.clientX, e.clientY)}
+        onTouchStart={(e) => {
+          if (e.touches.length > 0) {
+            startDrag(e.touches[0].clientX, e.touches[0].clientY);
+          }
+        }}
+        aria-label="Chat Zalo"
+        title={cleanZaloPhone ? `Chat Zalo (${cleanZaloPhone})` : 'Chat Zalo với Shop'}
+      >
+        <span className={styles.floatingIcon}>
+          <SiZalo size={22} />
+        </span>
+      </button>
     </div>
   );
 }

@@ -917,7 +917,7 @@ export default function AdminSettingsPage() {
                       <span style={{ fontSize: 18 }}>💬</span>
                       <span>Kênh Liên Hệ & Chat Zalo 1:1</span>
                     </h3>
-                    <p>Cài đặt số điện thoại Zalo để khách hàng bấm Chat 1:1 trực tiếp từ trang chi tiết sản phẩm</p>
+                    <p>Cài đặt số điện thoại Zalo để khách hàng bấm nút Zalo nổi hoặc nút Chat trên toàn hệ thống (mở Zalo nhắn tin trực tiếp 1:1)</p>
                   </div>
                 </div>
 
@@ -934,7 +934,7 @@ export default function AdminSettingsPage() {
                     <input
                       type="text"
                       className={styles.input}
-                      placeholder="Ví dụ: 0988888888 (Khách bấm Chat sẽ mở Zalo nhắn tin trực tiếp)"
+                      placeholder="Ví dụ: 0988888888 (Khách bấm Chat Zalo sẽ mở Zalo nhắn tin trực tiếp)"
                       value={theme.socialLinks?.zaloPhone || ''}
                       onChange={(e) => {
                         const updated: ThemeConfig = {
@@ -945,7 +945,7 @@ export default function AdminSettingsPage() {
                       }}
                     />
                     <span style={{ fontSize: 11.5, color: 'var(--text-muted, #94a3b8)', marginTop: 4 }}>
-                      Khi khách hàng xem sản phẩm và bấm nút <strong>&quot;Chat&quot; / &quot;Chat Zalo&quot;</strong> trên cả điện thoại và máy tính, hệ thống sẽ mở trực tiếp khung chat Zalo 1:1 với số này (link <code>https://zalo.me/số_điện_thoại</code>).
+                      Khi khách hàng bấm vào <strong>nút Zalo nổi góc màn hình</strong> hoặc nút <strong>&quot;Chat Zalo&quot;</strong> tại trang chi tiết sản phẩm / QuickHub / đơn hàng, hệ thống sẽ mở trực tiếp khung chat Zalo 1:1 với số này (link <code>https://zalo.me/số_điện_thoại</code>).
                     </span>
                   </div>
 
