@@ -341,23 +341,8 @@ export default function CheckoutAddressModal({
                   onChange={(e) => setFormData({ ...formData, streetAddress: e.target.value })}
                 />
               </div>
-
               {/* Row 4: Email & Note */}
               <div className={styles.gridTwo}>
-                <div className={styles.inputGroup}>
-                  <label className={styles.inputLabel}>
-                    <FiMail size={13} />
-                    <span>Email (Tùy chọn)</span>
-                  </label>
-                  <input
-                    type="email"
-                    placeholder="VD: khachhang@gmail.com"
-                    className={styles.inputField}
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  />
-                  <span className={styles.inputSubtext}>Nhận hóa đơn điện tử</span>
-                </div>
 
                 <div className={styles.inputGroup}>
                   <label className={styles.inputLabel}>

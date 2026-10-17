@@ -47,6 +47,7 @@ scripts/test*
 # local database
 /data/db/
 /data/
+!/data/tenant_config.json
 !/src/data/
 
 node_modules

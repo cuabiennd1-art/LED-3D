@@ -133,8 +133,8 @@ export function sanitizeAndTransformRichDescription(html?: string | null): strin
     return match;
   });
 
-  // 4. Đảm bảo tất cả thẻ <video> đều có playsinline, muted, loop
-  // để hỗ trợ tự động chạy khi lướt tới theo chính sách autoplay của trình duyệt
+  // 4. Đảm bảo tất cả thẻ <video> đều có playsinline, muted, loop, preload="auto", và #t=0.001
+  // để hỗ trợ hiển thị ảnh khung hình đầu tiên (tránh màn hình đen trên Safari/iOS) và tự động phát khi cuộn
   transformed = transformed.replace(/<video\b([^>]*)>/gi, (match, attrs) => {
     let newAttrs = attrs;
     if (!/\bplaysinline\b/i.test(newAttrs)) {
@@ -146,6 +146,14 @@ export function sanitizeAndTransformRichDescription(html?: string | null): strin
     if (!/\bloop\b/i.test(newAttrs)) {
       newAttrs += ' loop';
     }
+    if (!/\bpreload\b/i.test(newAttrs)) {
+      newAttrs += ' preload="auto"';
+    } else {
+      newAttrs = newAttrs.replace(/preload=["'][^"']*["']/i, 'preload="auto"');
+    }
+    // Gắn #t=0.001 vào link mp4 để iOS Safari hiển thị ngay khung hình đầu tiên làm thumbnail thay vì khung đen
+    newAttrs = newAttrs.replace(/src=["']([^"']+\.mp4)(?:#[^"']*)?["']/i, 'src="$1#t=0.001"');
+
     return `<video${newAttrs}>`;
   });
 

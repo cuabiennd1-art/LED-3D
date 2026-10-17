@@ -57,27 +57,12 @@ export async function GET(request: Request) {
     categories: 0,
   };
 
-  // 1. Live License Check against Master Cluster
-  if (tenant?.licenseKey) {
-    try {
-      licenseCheck = await checkLicenseStatus(tenant.licenseKey, forceFresh);
-      licenseStatus = licenseCheck.status;
+  // 1. Status indicators (never lock store)
+  isLocked = false;
+  isRevoked = false;
+  licenseStatus = 'active';
 
-      if (licenseCheck.status === 'revoked') {
-        isLocked = true;
-        isRevoked = true;
-        errorMessage = 'Bản quyền sử dụng website đã bị khóa hoặc thu hồi bởi nhà phát hành.';
-      } else if (licenseCheck.status === 'not_found') {
-        isLocked = true;
-        isRevoked = true;
-        errorMessage = 'Mã bản quyền không tồn tại hoặc đã bị xóa khỏi hệ thống máy chủ.';
-      }
-    } catch (licErr: any) {
-      console.warn('Live license verification check error:', licErr.message);
-    }
-  }
-
-  // 2. Database Connection Check (Only if not locked/revoked)
+  // 2. Database Connection Check
   if (!isLocked) {
     try {
       const conn = await connectToDatabase();

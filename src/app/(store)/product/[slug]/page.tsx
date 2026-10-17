@@ -940,6 +940,42 @@ export default function ProductDetailPage() {
     let rafId: number | null = null;
     const visibleMap = new WeakMap<HTMLVideoElement, boolean>();
 
+    const checkAllVideos = () => {
+      const selector = `.${styles.richDescription} video, .${styles.descContent} video, .${styles.fullDescText} video`;
+      const videoElements = Array.from(document.querySelectorAll<HTMLVideoElement>(selector));
+      if (videoElements.length === 0) return;
+
+      const windowHeight = window.innerHeight || document.documentElement.clientHeight;
+
+      videoElements.forEach((video) => {
+        // Bỏ qua các video thuộc view đang bị ẩn (mobileView vs pcView display: none)
+        if (video.offsetParent === null && video.offsetWidth === 0 && video.offsetHeight === 0) {
+          return;
+        }
+
+        const rect = video.getBoundingClientRect();
+        // Video được coi là trong tầm mắt khi chiếm phần nhìn từ 15% đến 85% chiều cao màn hình
+        const isVisible = rect.top < windowHeight * 0.85 && rect.bottom > windowHeight * 0.15;
+        const wasVisible = visibleMap.get(video) || false;
+
+        if (isVisible && !wasVisible) {
+          visibleMap.set(video, true);
+          const playPromise = video.play();
+          if (playPromise !== undefined) {
+            playPromise.catch(() => {
+              video.muted = true;
+              video.play().catch(() => {});
+            });
+          }
+        } else if (!isVisible && wasVisible) {
+          visibleMap.set(video, false);
+          if (!video.paused) {
+            video.pause();
+          }
+        }
+      });
+    };
+
     const setupObserver = () => {
       const selector = `.${styles.richDescription} video, .${styles.descContent} video, .${styles.fullDescText} video`;
       const videoElements = Array.from(document.querySelectorAll<HTMLVideoElement>(selector));
@@ -951,7 +987,7 @@ export default function ProductDetailPage() {
         observer = null;
       }
 
-      // Cấu hình các video: muted, playsinline, loop để tuân thủ autoplay policy của trình duyệt
+      // Cấu hình các video: muted, playsinline, loop, preload="auto", #t=0.001
       videoElements.forEach((vid) => {
         vid.muted = true;
         vid.defaultMuted = true;
@@ -960,29 +996,31 @@ export default function ProductDetailPage() {
         vid.setAttribute('muted', '');
         vid.loop = true;
         vid.setAttribute('loop', '');
+        vid.preload = 'auto';
+        vid.setAttribute('preload', 'auto');
+        if (vid.src && vid.src.includes('.mp4') && !vid.src.includes('#')) {
+          vid.src = vid.src + '#t=0.001';
+        }
       });
 
+      // 1. IntersectionObserver tiêu chuẩn
       observer = new IntersectionObserver(
         (entries) => {
           entries.forEach((entry) => {
             const video = entry.target as HTMLVideoElement;
-            // Video được coi là hiển thị khi xuất hiện từ 20% trở lên trong viewport
             const isVisible = entry.isIntersecting && entry.intersectionRatio >= 0.2;
             const wasVisible = visibleMap.get(video) || false;
 
             if (isVisible && !wasVisible) {
-              // Vừa lướt tới: tự động phát
               visibleMap.set(video, true);
               const playPromise = video.play();
               if (playPromise !== undefined) {
                 playPromise.catch(() => {
-                  // Fallback: nếu trình duyệt chặn, đảm bảo muted và phát lại
                   video.muted = true;
                   video.play().catch(() => {});
                 });
               }
             } else if (!isVisible && wasVisible) {
-              // Vừa lướt qua / ra ngoài viewport: tạm dừng
               visibleMap.set(video, false);
               if (!video.paused) {
                 video.pause();
@@ -996,11 +1034,32 @@ export default function ProductDetailPage() {
       );
 
       videoElements.forEach((vid) => observer?.observe(vid));
+
+      // Kiểm tra ngay sau khi khởi tạo
+      checkAllVideos();
     };
 
     // Chạy observer sau khi DOM render xong
     rafId = requestAnimationFrame(setupObserver);
     timer = setTimeout(setupObserver, 200);
+
+    // 2. Lắng nghe sự kiện scroll trên cả window và container cuộn của mobile (.mobileScrollArea)
+    let scrollTicking = false;
+    const onScroll = () => {
+      if (!scrollTicking) {
+        requestAnimationFrame(() => {
+          checkAllVideos();
+          scrollTicking = false;
+        });
+        scrollTicking = true;
+      }
+    };
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+    const mobileScrollEl = document.querySelector(`.${styles.mobileScrollArea}`);
+    if (mobileScrollEl) {
+      mobileScrollEl.addEventListener('scroll', onScroll, { passive: true });
+    }
 
     const handleVisibilityChange = () => {
       if (document.hidden) {
@@ -1008,6 +1067,8 @@ export default function ProductDetailPage() {
         document.querySelectorAll<HTMLVideoElement>(selector).forEach((v) => {
           if (!v.paused) v.pause();
         });
+      } else {
+        checkAllVideos();
       }
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
@@ -1016,6 +1077,10 @@ export default function ProductDetailPage() {
       if (rafId) cancelAnimationFrame(rafId);
       if (timer) clearTimeout(timer);
       if (observer) observer.disconnect();
+      window.removeEventListener('scroll', onScroll);
+      if (mobileScrollEl) {
+        mobileScrollEl.removeEventListener('scroll', onScroll);
+      }
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [loading, product?.description, product?._id, isExpandModalOpen]);

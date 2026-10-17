@@ -219,7 +219,7 @@ async function connectToDatabase(): Promise<typeof mongoose> {
       // 2. If running on Vercel / Cloud or Master Cluster is available: use Cloud Atlas cluster
       const isServerless = Boolean(process.env.VERCEL || process.env.VERCEL_ENV || process.env.AWS_LAMBDA_FUNCTION_NAME);
       if (isServerless || (MASTER_CLUSTER_BASE && MASTER_CLUSTER_BASE.includes('mongodb+srv://'))) {
-        const fallbackDb = tenant?.dbName || 'shop_shop_test_qvfr9';
+        const fallbackDb = tenant?.dbName || 'shop_led3d';
         const cloudUri = buildMongoUriForDb(fallbackDb);
         console.log('☁️ [Cloud Atlas Connect] Đang kết nối CSDL Cloud:', cloudUri.replace(/:([^:@]+)@/, ':****@'));
         const conn = await mongoose.connect(cloudUri, {

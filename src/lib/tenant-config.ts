@@ -65,7 +65,16 @@ export function getTenantConfig(): TenantConfig | null {
     }
   } catch (e) {}
 
-  return null;
+  // 5. Default Fallback Configuration (LED 3D Store)
+  const defaultFallback: TenantConfig = {
+    shopName: 'LED 3D Store',
+    dbName: 'shop_led3d',
+    mongoUri: process.env.MONGODB_URI || 'mongodb+srv://led3d:ED7DSqiUdsXASaRg@cluster0.9oqu5tv.mongodb.net/shop_led3d?retryWrites=true&w=majority&appName=Cluster0',
+    createdAt: '2026-10-17T02:14:00.000Z',
+    licenseKey: 'AFF-DK8I-YP1D-WMH2',
+  };
+  global.activeTenantConfig = defaultFallback;
+  return defaultFallback;
 }
 
 export function saveTenantConfig(config: TenantConfig): void {

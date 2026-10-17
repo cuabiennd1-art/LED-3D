@@ -5,7 +5,6 @@ import { Toaster } from 'react-hot-toast';
 import { CustomerAuthProvider } from '@/contexts/CustomerAuthContext';
 import { CartProvider } from '@/contexts/CartContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
-import DatabaseSetupBanner from '@/components/common/DatabaseSetupBanner';
 
 const jakarta = Plus_Jakarta_Sans({
   subsets: ['latin', 'vietnamese'],
@@ -108,7 +107,6 @@ export default function RootLayout({
       <body className={jakarta.className}>
         <ThemeProvider>
           <ServiceWorkerRegister />
-          <DatabaseSetupBanner />
           <CustomerAuthProvider>
             <CartProvider>
               {children}
