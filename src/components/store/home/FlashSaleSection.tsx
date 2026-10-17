@@ -268,7 +268,7 @@ const FlashSaleSectionComponent: React.FC<FlashSaleSectionProps> = ({
 
             return (
               <Link
-                href={`/product/${item.slug}`}
+                href={`/product/${item.slug || item.productId || item._id || ''}`}
                 key={item._id || item.productId || i}
                 className={styles.flashCard}
               >

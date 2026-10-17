@@ -108,7 +108,7 @@ const StoreProductCardComponent: React.FC<StoreProductCardProps> = ({
 
   if (viewMode === 'list') {
     return (
-      <Link href={`/product/${product.slug}`} className={styles.listCard}>
+      <Link href={`/product/${product.slug || product._id}`} className={styles.listCard}>
         <div className={styles.listImgWrap}>
           <Image
             src={displayImage}
@@ -167,7 +167,7 @@ const StoreProductCardComponent: React.FC<StoreProductCardProps> = ({
   }
 
   return (
-    <Link href={`/product/${product.slug}`} className={styles.shopeeCard}>
+    <Link href={`/product/${product.slug || product._id}`} className={styles.shopeeCard}>
       <div className={styles.cardImgWrap}>
         <Image
           src={displayImage}

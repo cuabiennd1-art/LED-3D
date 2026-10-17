@@ -127,7 +127,7 @@ const TopBestSellersSectionComponent: React.FC<TopBestSellersSectionProps> = ({
                 </div>
 
                 {/* Ảnh Sản Phẩm */}
-                <Link href={`/product/${product.slug}`} className={styles.imgContainer}>
+                <Link href={`/product/${product.slug || product._id}`} className={styles.imgContainer}>
                   <Image
                     src={imageSrc}
                     alt={product.name}
@@ -148,7 +148,7 @@ const TopBestSellersSectionComponent: React.FC<TopBestSellersSectionProps> = ({
                   <span className={styles.categoryTag}>{categoryName}</span>
 
                   <Link
-                    href={`/product/${product.slug}`}
+                    href={`/product/${product.slug || product._id}`}
                     className={styles.productName}
                     title={product.name}
                   >
@@ -199,7 +199,7 @@ const TopBestSellersSectionComponent: React.FC<TopBestSellersSectionProps> = ({
                     </button>
 
                     <Link
-                      href={`/product/${product.slug}`}
+                      href={`/product/${product.slug || product._id}`}
                       className={styles.btnDetailLink}
                     >
                       <span>Chi tiết</span>

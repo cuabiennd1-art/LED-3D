@@ -194,7 +194,7 @@ const RecommendedProductScrollerComponent: React.FC<RecommendedProductScrollerPr
 
           return (
             <div key={product._id || idx} className={styles.largeProductCard}>
-              <Link href={`/product/${product.slug}`} className={styles.cardImageLink}>
+              <Link href={`/product/${product.slug || product._id}`} className={styles.cardImageLink}>
                 <div className={styles.imageContainer}>
                   <Image
                     src={displayImage}
@@ -218,7 +218,7 @@ const RecommendedProductScrollerComponent: React.FC<RecommendedProductScrollerPr
 
               {/* PRODUCT INFO CONTAINER */}
               <div className={styles.cardContent}>
-                <Link href={`/product/${product.slug}`} className={styles.productNameLink}>
+                <Link href={`/product/${product.slug || product._id}`} className={styles.productNameLink}>
                   <h3 className={styles.productName} title={product.name}>
                     {product.name}
                   </h3>

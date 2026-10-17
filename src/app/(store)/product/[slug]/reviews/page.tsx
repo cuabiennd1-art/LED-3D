@@ -126,11 +126,16 @@ export default function ProductReviewsPage() {
     async function loadProduct() {
       if (!slug) return;
       try {
-        const res = await apiFetch(`/api/products?limit=1&status=active&search=${encodeURIComponent(slug)}`);
+        const res = await apiFetch(`/api/products/${encodeURIComponent(slug)}`);
         const data = await res.json();
-        if (data.success && Array.isArray(data.data) && data.data.length > 0) {
-          const match = data.data.find((p: any) => p.slug === slug) || data.data[0];
-          setProduct(match);
+        if (data.success && data.data) {
+          setProduct(data.data);
+        } else {
+          const sRes = await apiFetch(`/api/products?limit=1&search=${encodeURIComponent(slug)}`);
+          const sData = await sRes.json();
+          if (sData.success && Array.isArray(sData.data) && sData.data.length > 0) {
+            setProduct(sData.data[0]);
+          }
         }
       } catch (err) {
         console.error('Error fetching product for reviews:', err);

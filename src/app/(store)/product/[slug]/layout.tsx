@@ -11,13 +11,35 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   try {
     const { slug } = await params;
-    if (!slug) return {};
+    if (!slug || slug === 'undefined' || slug === 'null') return {};
+
+    const rawSlug = String(slug).trim();
+    let decodedSlug = rawSlug;
+    try {
+      decodedSlug = decodeURIComponent(rawSlug).trim();
+    } catch (_) {
+      decodedSlug = rawSlug;
+    }
 
     await connectToDatabase();
-    const [product, setting] = await Promise.all([
-      Product.findOne({ slug }).lean() as any,
-      Setting.findOne({ key: 'theme_settings' }).lean() as any,
-    ]);
+    const escapeRegex = (str: string) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+    let product: any = null;
+    if (rawSlug.match(/^[0-9a-fA-F]{24}$/)) {
+      product = await Product.findById(rawSlug).lean();
+    }
+    if (!product) {
+      product = await Product.findOne({
+        $or: [{ slug: decodedSlug }, { slug: rawSlug }],
+      }).lean();
+    }
+    if (!product) {
+      product = await Product.findOne({
+        slug: { $regex: new RegExp(`^${escapeRegex(decodedSlug)}$`, 'i') },
+      }).lean();
+    }
+
+    const setting = (await Setting.findOne({ key: 'theme_settings' }).lean()) as any;
 
     if (!product) {
       return {

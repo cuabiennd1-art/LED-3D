@@ -12,12 +12,63 @@ export async function GET(
   try {
     await connectToDatabase();
     const { id } = await params;
+    if (!id || id === 'undefined' || id === 'null') {
+      return NextResponse.json(
+        { success: false, message: 'Thiếu định danh sản phẩm' },
+        { status: 404 }
+      );
+    }
 
-    let productDoc;
-    if (id.match(/^[0-9a-fA-F]{24}$/)) {
-      productDoc = await Product.findById(id).populate('category', 'name slug').lean();
-    } else {
-      productDoc = await Product.findOne({ slug: id }).populate('category', 'name slug').lean();
+    const rawId = String(id).trim();
+    let decodedId = rawId;
+    try {
+      decodedId = decodeURIComponent(rawId).trim();
+    } catch (_) {
+      decodedId = rawId;
+    }
+
+    const escapeRegex = (str: string) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+    let productDoc: any = null;
+
+    // 1. Tìm theo ObjectId nếu là chuỗi 24 hex
+    if (rawId.match(/^[0-9a-fA-F]{24}$/)) {
+      productDoc = await Product.findById(rawId).populate('category', 'name slug').lean();
+    }
+
+    // 2. Tìm chính xác theo slug (decodedId hoặc rawId)
+    if (!productDoc) {
+      productDoc = await Product.findOne({
+        $or: [{ slug: decodedId }, { slug: rawId }],
+      }).populate('category', 'name slug').lean();
+    }
+
+    // 3. Tìm không phân biệt hoa thường (Case-insensitive) - Khắc phục bàn phím di động tự viết hoa chữ đầu
+    if (!productDoc) {
+      productDoc = await Product.findOne({
+        slug: { $regex: new RegExp(`^${escapeRegex(decodedId)}$`, 'i') },
+      }).populate('category', 'name slug').lean();
+    }
+
+    // 4. Tìm theo slug đã chuẩn hóa dấu / ký tự đặc biệt
+    if (!productDoc) {
+      const normalizedSlug = generateSlug(decodedId);
+      if (normalizedSlug && normalizedSlug !== decodedId) {
+        productDoc = await Product.findOne({
+          $or: [
+            { slug: normalizedSlug },
+            { slug: { $regex: new RegExp(`^${escapeRegex(normalizedSlug)}$`, 'i') } },
+          ],
+        }).populate('category', 'name slug').lean();
+      }
+    }
+
+    // 5. Tìm kiếm dự phòng theo tên sản phẩm nếu slug cũ bị thay đổi
+    if (!productDoc && decodedId.length > 5) {
+      const nameKeywords = decodedId.replace(/[-_]+/g, ' ').trim();
+      productDoc = await Product.findOne({
+        name: { $regex: new RegExp(`^${escapeRegex(nameKeywords)}$`, 'i') },
+      }).populate('category', 'name slug').lean();
     }
 
     if (!productDoc) {

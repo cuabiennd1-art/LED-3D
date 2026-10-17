@@ -309,17 +309,42 @@ export default function ProductDetailPage() {
   };
 
   // Fetch product data & flash sale status
+  // Fetch product data & flash sale status
   useEffect(() => {
-    if (!params.slug) return;
+    const rawSlug = Array.isArray(params?.slug) ? params.slug[0] : params?.slug;
+    if (!rawSlug) return;
 
+    const cleanSlug = String(rawSlug).trim();
+    if (cleanSlug === 'undefined' || cleanSlug === 'null' || cleanSlug === '') {
+      router.push('/');
+      return;
+    }
+
+    let isMounted = true;
     setLoading(true);
-    Promise.all([
-      apiFetch(`/api/products/${params.slug}`).then((r) => r.json()),
-      apiFetch(`/api/flash-sale`).then((r) => r.json()).catch(() => null),
-      apiFetch(`/api/settings/fomo`).then((r) => r.json()).catch(() => null),
-    ])
-      .then(([prodData, fsData, fomoData]) => {
-        if (prodData.success && prodData.data) {
+
+    const loadData = async (retryCount = 0) => {
+      try {
+        const [prodRes, fsData, fomoData] = await Promise.all([
+          apiFetch(`/api/products/${encodeURIComponent(cleanSlug)}`).catch(() => null),
+          apiFetch(`/api/flash-sale`).then((r) => r.json()).catch(() => null),
+          apiFetch(`/api/settings/fomo`).then((r) => r.json()).catch(() => null),
+        ]);
+
+        let prodData: any = null;
+        if (prodRes && prodRes.ok) {
+          prodData = await prodRes.json().catch(() => null);
+        }
+
+        // Tự động thử lại 1 lần nếu mạng lag hoặc server cold-start
+        if ((!prodData || !prodData.success) && retryCount === 0) {
+          await new Promise((res) => setTimeout(res, 800));
+          if (isMounted) return loadData(1);
+        }
+
+        if (!isMounted) return;
+
+        if (prodData && prodData.success && prodData.data) {
           const p = prodData.data;
           setProduct(p);
 
@@ -348,7 +373,6 @@ export default function ProductDetailPage() {
           setSelectedAttributes(initAttrs);
 
           // 2. Cross-verify with live /api/flash-sale data
-          // ONLY attach flash sale when flash sale campaign is active AND currently LIVE in real-time
           if (fsData && fsData.success && fsData.data && fsData.data.isActive && fsData.data.isLive) {
             const pIdStr = String(p._id);
             let liveFsProduct: any = null;
@@ -387,7 +411,6 @@ export default function ProductDetailPage() {
               setFlashSaleItem(null);
             }
           } else {
-            // Flash sale is not active or not currently live -> strictly clear flashSaleItem
             setFlashSaleItem(null);
           }
 
@@ -401,13 +424,20 @@ export default function ProductDetailPage() {
         } else {
           setProduct(null);
         }
-      })
-      .catch((err) => {
+      } catch (err) {
         console.error('Error fetching product detail:', err);
-        setProduct(null);
-      })
-      .finally(() => setLoading(false));
-  }, [params.slug]);
+        if (isMounted) setProduct(null);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+
+    loadData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [params.slug, router]);
 
   // Flash sale countdown timer
   useEffect(() => {
@@ -752,25 +782,46 @@ export default function ProductDetailPage() {
   if (!product) {
     return (
       <div className={styles.page}>
-        <div style={{ padding: 40, textAlign: 'center' }}>
-          <FiAlertCircle size={40} color="#ef4444" style={{ marginBottom: 12 }} />
-          <h3>Không tìm thấy sản phẩm</h3>
-          <p style={{ color: 'var(--text-muted)' }}>Sản phẩm có thể đã bị xóa hoặc ngưng kinh doanh.</p>
-          <button
-            onClick={() => router.push('/')}
-            style={{
-              marginTop: 16,
-              padding: '10px 20px',
-              borderRadius: 9999,
-              background: 'var(--primary, #ee4d2d)',
-              color: '#fff',
-              border: 'none',
-              cursor: 'pointer',
-              fontWeight: 700,
-            }}
-          >
-            Quay lại trang chủ
-          </button>
+        <div style={{ padding: '60px 20px', textAlign: 'center', maxWidth: 440, margin: '0 auto' }}>
+          <FiAlertCircle size={44} color="#ef4444" style={{ marginBottom: 16 }} />
+          <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, color: 'var(--text-main, #ffffff)' }}>
+            Không tìm thấy sản phẩm
+          </h3>
+          <p style={{ color: 'var(--text-muted, #94a3b8)', fontSize: 13, marginBottom: 24, lineHeight: 1.6 }}>
+            Sản phẩm có thể đã được cập nhật đường dẫn mới hoặc đường truyền mạng tạm thời bị gián đoạn.
+          </p>
+          <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
+            <button
+              onClick={() => window.location.reload()}
+              style={{
+                padding: '10px 20px',
+                borderRadius: 9999,
+                background: 'var(--bg-card, #13161f)',
+                color: 'var(--text-main, #ffffff)',
+                border: '1px solid var(--border-color, #232838)',
+                cursor: 'pointer',
+                fontWeight: 600,
+                fontSize: 13,
+              }}
+            >
+              🔄 Tải lại trang
+            </button>
+            <button
+              onClick={() => router.push('/')}
+              style={{
+                padding: '10px 20px',
+                borderRadius: 9999,
+                background: 'var(--primary, #ee4d2d)',
+                color: '#fff',
+                border: 'none',
+                cursor: 'pointer',
+                fontWeight: 700,
+                fontSize: 13,
+              }}
+            >
+              Quay lại trang chủ
+            </button>
+          </div>
         </div>
       </div>
     );
