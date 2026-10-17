@@ -933,11 +933,18 @@ export default function ProductEditModal({
 
             {/* Row 5: Description */}
             <div className={styles.formGroup}>
-              <label className={styles.label}>Mô tả sản phẩm (Văn bản & hình ảnh xen kẽ)</label>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                <label className={styles.label} style={{ margin: 0 }}>
+                  Mô tả sản phẩm (Văn bản, hình ảnh & video xen kẽ)
+                </label>
+                <span style={{ fontSize: 11.5, color: '#c084fc', fontWeight: 600 }}>
+                  📹 Hỗ trợ tải Video lưu vào CSDL MongoDB
+                </span>
+              </div>
               <ProductDescriptionEditor
                 value={formData.description}
                 onChange={(val) => setFormData({ ...formData, description: val })}
-                placeholder="Nhập mô tả chi tiết, tải ảnh hoặc dán ảnh xen kẽ giữa các đoạn văn..."
+                placeholder="Nhập mô tả chi tiết, chèn hình ảnh hoặc tải video xen kẽ giữa các đoạn văn..."
               />
             </div>
 

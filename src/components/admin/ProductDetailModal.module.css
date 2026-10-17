@@ -340,6 +340,24 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
+.descriptionBox video {
+  max-width: 100%;
+  width: 100%;
+  height: auto;
+  max-height: 400px;
+  display: block;
+  margin: 14px auto;
+  border-radius: 10px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  background-color: #000000;
+}
+
+.descriptionBox iframe {
+  max-width: 100%;
+  border-radius: 10px;
+  border: none;
+}
+
 /* Footer */
 .footer {
   display: flex;

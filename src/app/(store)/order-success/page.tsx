@@ -19,7 +19,7 @@ import {
   FiShield,
   FiArrowRight,
 } from 'react-icons/fi';
-import { SiZalo } from 'react-icons/si';
+import ZaloIcon from '@/components/ui/ZaloIcon';
 import toast from 'react-hot-toast';
 import { formatPrice } from '@/lib/utils';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -430,7 +430,7 @@ function OrderSuccessContent() {
                     className={styles.chatBtn}
                     title={`Chat Zalo (${cleanZaloPhone})`}
                   >
-                    <SiZalo size={16} />
+                    <ZaloIcon size={16} />
                     <span>Hỗ Trợ Zalo Cho Đơn Này</span>
                   </a>
                 ) : (

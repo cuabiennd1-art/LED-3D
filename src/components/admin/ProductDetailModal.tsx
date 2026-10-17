@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { FiX, FiExternalLink, FiEdit2, FiBox, FiTag, FiCalendar, FiDollarSign } from 'react-icons/fi';
 import toast from 'react-hot-toast';
-import { formatPrice, formatDate } from '@/lib/utils';
+import { formatPrice, formatDate, sanitizeAndTransformRichDescription } from '@/lib/utils';
 import LazyImage from '@/components/common/LazyImage';
 import Skeleton from '@/components/common/Skeleton';
 import { apiFetch } from '@/lib/api';
@@ -277,7 +277,7 @@ export default function ProductDetailModal({ productId, onClose }: ProductDetail
                   /<\/?(p|div|br|img|video|source|iframe|h[1-6]|ul|ol|li|span|table|hr|s|blockquote|strong|b|em|i)\b/i.test(product.description) ? (
                     <div
                       className={styles.descriptionBox}
-                      dangerouslySetInnerHTML={{ __html: product.description }}
+                      dangerouslySetInnerHTML={{ __html: sanitizeAndTransformRichDescription(product.description) }}
                     />
                   ) : (
                     <div className={styles.descriptionBox} style={{ whiteSpace: 'pre-line' }}>

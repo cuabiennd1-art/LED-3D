@@ -123,7 +123,7 @@ export default function ProductDescriptionEditor({
   const [isUploading, setIsUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<string>('');
   const [showUrlModal, setShowUrlModal] = useState(false);
-  const [urlMediaType, setUrlMediaType] = useState<'image' | 'video' | 'youtube'>('image');
+  const [urlMediaType, setUrlMediaType] = useState<'image' | 'video' | 'youtube' | 'tiktok'>('image');
   const [imageUrlInput, setImageUrlInput] = useState('');
   const [imageAltInput, setImageAltInput] = useState('');
 
@@ -836,6 +836,55 @@ export default function ProductDescriptionEditor({
       : null;
   };
 
+  // Helper to extract TikTok Video ID and embed URL
+  const formatTikTokEmbed = (url: string): { embedUrl: string; videoId: string; isShortLink?: boolean } | null => {
+    if (!url) return null;
+    const clean = url.trim();
+    if (!clean.toLowerCase().includes('tiktok.com')) return null;
+
+    if (clean.includes('vt.tiktok.com') || clean.includes('vm.tiktok.com')) {
+      return { embedUrl: '', videoId: '', isShortLink: true };
+    }
+
+    // Match /video/1234567890123456789 or /player/v1/... or raw id
+    const match =
+      clean.match(/\/video\/(\d+)/i) ||
+      clean.match(/\/player\/v1\/(\d+)/i) ||
+      clean.match(/\/embed\/(?:v\d+\/)?(\d+)/i) ||
+      clean.match(/\b(\d{15,22})\b/);
+
+    if (match && match[1]) {
+      return {
+        embedUrl: `https://www.tiktok.com/player/v1/${match[1]}`,
+        videoId: match[1],
+      };
+    }
+    return null;
+  };
+
+  // Insert TikTok responsive iframe embed at cursor or bottom
+  const insertTikTokElement = (embedUrl: string, videoId: string, originalUrl: string) => {
+    const tiktokHtml = `
+      <div class="tiktok-embed-container" style="text-align: center; margin: 24px auto; max-width: 540px; width: 100%;">
+        <iframe
+          src="${embedUrl}"
+          title="Video TikTok mô tả sản phẩm"
+          style="width: 100%; height: 840px; border: none; border-radius: 16px; box-shadow: 0 12px 36px rgba(0,0,0,0.5); background: #000000; overflow: hidden;"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          allowfullscreen
+          scrolling="no"
+        ></iframe>
+        <div style="margin-top: 10px;">
+          <a href="${originalUrl || `https://www.tiktok.com/@video/video/${videoId}`}" target="_blank" rel="noopener noreferrer" style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: #fe2c55; text-decoration: none; font-weight: 600; padding: 4px 12px; border-radius: 20px; background: rgba(254,44,85,0.08);">
+            <span>🎵 Mở xem video trên TikTok</span>
+          </a>
+        </div>
+      </div>
+      <p><br></p>
+    `;
+    insertHtmlAtCursorOrBottom(tiktokHtml);
+  };
+
   // Handle URL Insert Confirmation (Image or Video)
   const handleConfirmUrl = (e?: React.MouseEvent | React.KeyboardEvent) => {
     if (e) {
@@ -848,10 +897,22 @@ export default function ProductDescriptionEditor({
       return;
     }
 
+    const tikTokInfo = formatTikTokEmbed(cleanUrl);
     const ytEmbed = formatYouTubeEmbedUrl(cleanUrl);
     const isDirectVideo = /\.(mp4|webm|ogg|mov|m4v)(\?.*)?$/i.test(cleanUrl);
 
-    if (urlMediaType === 'youtube' || ytEmbed) {
+    if (urlMediaType === 'tiktok' || tikTokInfo) {
+      if (tikTokInfo?.isShortLink) {
+        toast.error('Đây là link rút gọn của app TikTok (vt.tiktok.com). Bạn vui lòng mở link trên trình duyệt để copy link đầy đủ dạng https://www.tiktok.com/@.../video/...');
+        return;
+      }
+      if (!tikTokInfo || !tikTokInfo.videoId) {
+        toast.error('Không tìm thấy ID video TikTok. Vui lòng dán link dạng: https://www.tiktok.com/@user/video/12345...');
+        return;
+      }
+      insertTikTokElement(tikTokInfo.embedUrl, tikTokInfo.videoId, cleanUrl);
+      toast.success('Đã chèn video TikTok vào mô tả thành công!');
+    } else if (urlMediaType === 'youtube' || ytEmbed) {
       if (!ytEmbed) {
         toast.error('Đường dẫn YouTube không đúng định dạng');
         return;
@@ -871,15 +932,16 @@ export default function ProductDescriptionEditor({
     setShowUrlModal(false);
   };
 
-  // Handle Clipboard Paste (Supports Direct Image Paste from Screenshots)
+  // Handle Clipboard Paste (Supports Direct Image & Video Paste)
   const handlePaste = async (e: React.ClipboardEvent) => {
     const clipboardData = e.clipboardData;
     if (!clipboardData) return;
 
     const items = clipboardData.items;
     for (let i = 0; i < items.length; i++) {
-      if (items[i].type.indexOf('image') !== -1) {
-        const file = items[i].getAsFile();
+      const item = items[i];
+      if (item.type.indexOf('image') !== -1) {
+        const file = item.getAsFile();
         if (file) {
           e.preventDefault();
           saveSelection();
@@ -902,6 +964,36 @@ export default function ProductDescriptionEditor({
             }
           } catch (err) {
             toast.error('Lỗi khi tải ảnh từ clipboard');
+          } finally {
+            setIsUploading(false);
+            setUploadStatus('');
+          }
+        }
+        break;
+      } else if (item.type.indexOf('video') !== -1) {
+        const file = item.getAsFile();
+        if (file) {
+          e.preventDefault();
+          saveSelection();
+          setIsUploading(true);
+          setUploadStatus('Đang tải video dán từ clipboard lưu vào CSDL MongoDB...');
+
+          try {
+            const formData = new FormData();
+            formData.append('file', file);
+            const res = await apiFetch('/api/upload', {
+              method: 'POST',
+              body: formData,
+            });
+            const data = await res.json();
+            if (data.success && data.data?.url) {
+              insertVideoElement(data.data.url, false);
+              toast.success('Đã lưu video vào CSDL MongoDB và chèn vào vị trí con trỏ!');
+            } else {
+              toast.error(data.message || 'Không thể upload video từ clipboard');
+            }
+          } catch (err) {
+            toast.error('Lỗi khi tải video từ clipboard');
           } finally {
             setIsUploading(false);
             setUploadStatus('');
@@ -1544,7 +1636,7 @@ export default function ProductDescriptionEditor({
               title="Tải video từ máy tính lưu vào CSDL MongoDB và chèn xen kẽ vào bài viết"
             >
               <FiVideo size={15} />
-              <span>{isUploading ? 'Đang tải...' : 'Upload video'}</span>
+              <span>{isUploading ? 'Đang tải...' : 'Upload video (Lưu DB)'}</span>
             </button>
 
             <button
@@ -1762,15 +1854,16 @@ export default function ProductDescriptionEditor({
               {urlMediaType === 'image' && <FiImage color="var(--primary, #3b82f6)" />}
               {urlMediaType === 'video' && <FiVideo color="#a855f7" />}
               {urlMediaType === 'youtube' && <span style={{ color: '#ef4444' }}>▶️</span>}
+              {urlMediaType === 'tiktok' && <span style={{ color: '#fe2c55' }}>🎵</span>}
               <span>Chèn Media từ đường dẫn URL</span>
             </h4>
 
             {/* Media Type Tabs */}
-            <div style={{ display: 'flex', gap: 6, marginBottom: 4 }}>
+            <div style={{ display: 'flex', gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
               <button
                 type="button"
                 className={`${styles.tabBtn} ${urlMediaType === 'image' ? styles.activeTabBtn : ''}`}
-                style={{ flex: 1, justifyContent: 'center' }}
+                style={{ flex: 1, minWidth: 70, justifyContent: 'center' }}
                 onClick={() => setUrlMediaType('image')}
               >
                 <FiImage size={13} />
@@ -1779,7 +1872,7 @@ export default function ProductDescriptionEditor({
               <button
                 type="button"
                 className={`${styles.tabBtn} ${urlMediaType === 'video' ? styles.activeTabBtn : ''}`}
-                style={{ flex: 1, justifyContent: 'center' }}
+                style={{ flex: 1, minWidth: 85, justifyContent: 'center' }}
                 onClick={() => setUrlMediaType('video')}
               >
                 <FiVideo size={13} />
@@ -1788,11 +1881,20 @@ export default function ProductDescriptionEditor({
               <button
                 type="button"
                 className={`${styles.tabBtn} ${urlMediaType === 'youtube' ? styles.activeTabBtn : ''}`}
-                style={{ flex: 1, justifyContent: 'center' }}
+                style={{ flex: 1, minWidth: 80, justifyContent: 'center' }}
                 onClick={() => setUrlMediaType('youtube')}
               >
                 <span>▶️</span>
                 <span>YouTube</span>
+              </button>
+              <button
+                type="button"
+                className={`${styles.tabBtn} ${urlMediaType === 'tiktok' ? styles.activeTabBtn : ''}`}
+                style={{ flex: 1, minWidth: 75, justifyContent: 'center' }}
+                onClick={() => setUrlMediaType('tiktok')}
+              >
+                <span>🎵</span>
+                <span>TikTok</span>
               </button>
             </div>
 
@@ -1800,8 +1902,9 @@ export default function ProductDescriptionEditor({
               <div style={{ marginBottom: 12 }}>
                 <label style={{ display: 'block', fontSize: 12, marginBottom: 6, color: 'var(--text-muted)' }}>
                   {urlMediaType === 'image' && 'Đường dẫn URL hình ảnh (bắt buộc)'}
-                  {urlMediaType === 'video' && 'Đường dẫn URL video MP4 / WebM (bắt buộc)'}
+                  {urlMediaType === 'video' && 'Đường dẫn URL video MP4 / WebM trực tiếp (bắt buộc)'}
                   {urlMediaType === 'youtube' && 'Link video YouTube (VD: https://youtube.com/watch?v=... hoặc https://youtu.be/...)'}
+                  {urlMediaType === 'tiktok' && 'Link video TikTok (VD: https://www.tiktok.com/@user/video/756802280...)'}
                 </label>
                 <input
                   type="text"
@@ -1811,7 +1914,9 @@ export default function ProductDescriptionEditor({
                       ? 'https://example.com/hinh-anh.jpg hoặc /uploads/...'
                       : urlMediaType === 'video'
                       ? 'https://example.com/video.mp4 hoặc /uploads/...'
-                      : 'https://www.youtube.com/watch?v=...'
+                      : urlMediaType === 'youtube'
+                      ? 'https://www.youtube.com/watch?v=...'
+                      : 'https://www.tiktok.com/@username/video/7568022809629363477'
                   }
                   value={imageUrlInput}
                   onChange={(e) => setImageUrlInput(e.target.value)}

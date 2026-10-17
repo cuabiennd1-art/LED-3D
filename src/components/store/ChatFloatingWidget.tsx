@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { usePathname } from 'next/navigation';
-import { SiZalo } from 'react-icons/si';
 import { useTheme } from '@/contexts/ThemeContext';
+import ZaloIcon from '@/components/ui/ZaloIcon';
 import toast from 'react-hot-toast';
 import styles from './ChatFloatingWidget.module.css';
 
@@ -162,7 +162,7 @@ export default function ChatFloatingWidget() {
         title={cleanZaloPhone ? `Chat Zalo (${cleanZaloPhone})` : 'Chat Zalo với Shop'}
       >
         <span className={styles.floatingIcon}>
-          <SiZalo size={22} />
+          <ZaloIcon size={48} />
         </span>
       </button>
     </div>

@@ -685,6 +685,33 @@
   border: none;
 }
 
+:global(.tiktok-embed-container) {
+  width: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin: 24px auto !important;
+}
+
+:global(.tiktok-embed-container iframe) {
+  width: 100% !important;
+  border-radius: 16px !important;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5) !important;
+}
+
+@media (min-width: 1024px) {
+  :global(.tiktok-embed-container) {
+    max-width: 560px !important;
+    margin: 32px auto !important;
+  }
+  :global(.tiktok-embed-container iframe) {
+    height: 860px !important;
+    border-radius: 18px !important;
+  }
+}
+
+
 .descFadeOverlay {
   position: absolute;
   bottom: 0;

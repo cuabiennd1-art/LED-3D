@@ -15,7 +15,7 @@ import {
   FiMapPin,
   FiBriefcase,
 } from 'react-icons/fi';
-import { SiZalo } from 'react-icons/si';
+import ZaloIcon from '@/components/ui/ZaloIcon';
 import { useTheme } from '@/contexts/ThemeContext';
 import styles from '@/app/(store)/demo/page.module.css';
 
@@ -206,7 +206,7 @@ const ShopProfileCardComponent: React.FC<ShopProfileCardProps> = ({
               }}
               title={cleanZaloPhone ? `Chat Zalo (${cleanZaloPhone})` : 'Chat với Shop'}
             >
-              {cleanZaloPhone ? <SiZalo size={13} /> : <FiMessageSquare size={13} />}
+              {cleanZaloPhone ? <ZaloIcon size={14} /> : <FiMessageSquare size={13} />}
               <span>{cleanZaloPhone ? 'Chat Zalo' : 'Chat'}</span>
             </button>
           </div>

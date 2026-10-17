@@ -204,11 +204,16 @@ export default function EditProductPage() {
               />
             </div>
             <div className={styles.formGroup}>
-              <label>Mô tả chi tiết (Văn bản & hình ảnh xen kẽ)</label>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                <label style={{ margin: 0 }}>Mô tả chi tiết (Văn bản, hình ảnh & video xen kẽ)</label>
+                <span style={{ fontSize: 11.5, color: '#c084fc', fontWeight: 600 }}>
+                  📹 Hỗ trợ tải Video lưu vào CSDL MongoDB
+                </span>
+              </div>
               <ProductDescriptionEditor
                 value={form.description}
                 onChange={(val) => setForm({ ...form, description: val })}
-                placeholder="Mô tả chi tiết, chèn hình ảnh xen kẽ giữa các đoạn văn..."
+                placeholder="Mô tả chi tiết, chèn hình ảnh hoặc tải video xen kẽ giữa các đoạn văn..."
               />
             </div>
           </div>

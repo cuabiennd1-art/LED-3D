@@ -30,9 +30,9 @@ import {
   FiUser,
   FiHome,
 } from 'react-icons/fi';
-import { SiZalo } from 'react-icons/si';
+import ZaloIcon from '@/components/ui/ZaloIcon';
 import toast from 'react-hot-toast';
-import { formatPrice } from '@/lib/utils';
+import { formatPrice, sanitizeAndTransformRichDescription } from '@/lib/utils';
 import { useCart } from '@/contexts/CartContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useCustomerAuth } from '@/contexts/CustomerAuthContext';
@@ -728,11 +728,12 @@ export default function ProductDetailPage() {
     const hasHtml = /<\/?(p|div|br|img|video|source|iframe|h[1-6]|ul|ol|li|strong|b|em|i|s|span|figure|table|hr|blockquote)\b/i.test(raw);
 
     if (hasHtml) {
+      const sanitized = sanitizeAndTransformRichDescription(raw);
       return (
         <div
           className={`${extraClass} ${styles.richDescription}`}
           onClick={handleDescriptionImageClick}
-          dangerouslySetInnerHTML={{ __html: raw }}
+          dangerouslySetInnerHTML={{ __html: sanitized }}
         />
       );
     }
@@ -1233,7 +1234,7 @@ export default function ProductDetailPage() {
             title={cleanZaloPhone ? `Chat Zalo 1:1 với Shop (${cleanZaloPhone})` : 'Chat với Shop'}
           >
             {cleanZaloPhone ? (
-              <SiZalo size={18} color="#0068FF" />
+              <ZaloIcon size={18} />
             ) : (
               <FiMessageSquare size={18} />
             )}
@@ -1592,7 +1593,7 @@ export default function ProductDetailPage() {
                 title={cleanZaloPhone ? `Chat Zalo 1:1 với Shop (${cleanZaloPhone})` : 'Chat với Shop'}
               >
                 {cleanZaloPhone ? (
-                  <SiZalo size={19} color="#0068FF" />
+                  <ZaloIcon size={19} />
                 ) : (
                   <FiMessageSquare size={17} />
                 )}

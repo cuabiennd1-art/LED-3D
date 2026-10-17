@@ -138,3 +138,65 @@ code, kbd, samp, pre {
 .badge-glow {
   box-shadow: 0 0 12px rgba(59, 130, 246, 0.35);
 }
+
+/* ==========================================================================
+   RESPONSIVE TIKTOK & VIDEO EMBEDS (Tự động phóng to trên PC & cân đối trên Mobile)
+   ========================================================================== */
+.tiktok-embed-container {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin: 24px auto !important;
+  width: 100% !important;
+  max-width: 360px !important;
+  box-sizing: border-box !important;
+  transition: max-width 0.3s ease !important;
+}
+
+.tiktok-embed-container iframe {
+  width: 100% !important;
+  height: 600px !important;
+  max-width: 100% !important;
+  border: none !important;
+  border-radius: 14px !important;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.45) !important;
+  background-color: #000000 !important;
+  overflow: hidden !important;
+  transition: all 0.3s ease !important;
+}
+
+/* Tablet (>= 640px) */
+@media (min-width: 640px) {
+  .tiktok-embed-container {
+    max-width: 460px !important;
+    margin: 28px auto !important;
+  }
+  .tiktok-embed-container iframe {
+    height: 740px !important;
+    border-radius: 16px !important;
+  }
+}
+
+/* Giao diện PC / Laptop / Desktop (>= 1024px) - HIỂN THỊ TO RÕ, ĐẸP MẮT */
+@media (min-width: 1024px) {
+  .tiktok-embed-container {
+    max-width: 560px !important;
+    margin: 32px auto !important;
+  }
+  .tiktok-embed-container iframe {
+    height: 860px !important;
+    border-radius: 18px !important;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6) !important;
+  }
+}
+
+/* Màn hình PC lớn (>= 1440px) */
+@media (min-width: 1440px) {
+  .tiktok-embed-container {
+    max-width: 600px !important;
+  }
+  .tiktok-embed-container iframe {
+    height: 900px !important;
+  }
+}
