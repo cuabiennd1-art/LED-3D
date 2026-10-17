@@ -42,6 +42,7 @@ export default function EditProductPage() {
     category: '',
     images: [] as string[],
     stock: 100,
+    soldCount: 0,
     description: '',
     isFeatured: false,
     status: 'active',
@@ -71,6 +72,7 @@ export default function EditProductPage() {
             category: p.category?._id || p.category || '',
             images: p.images || [],
             stock: p.stock ?? 0,
+            soldCount: p.soldCount ?? p.sold ?? 0,
             description: p.description || '',
             isFeatured: p.isFeatured || false,
             status: p.status || 'active',
@@ -420,6 +422,16 @@ export default function EditProductPage() {
                 className={styles.input}
                 value={form.stock || ''}
                 onChange={(e) => setForm({ ...form, stock: parseInt(e.target.value) || 0 })}
+              />
+            </div>
+            <div className={styles.formGroup}>
+              <label>Lượt đã bán (Hiển thị ngoài shop)</label>
+              <input
+                type="number"
+                className={styles.input}
+                value={form.soldCount !== undefined && form.soldCount !== null ? form.soldCount : ''}
+                onChange={(e) => setForm({ ...form, soldCount: parseInt(e.target.value) || 0 })}
+                placeholder="VD: 500"
               />
             </div>
           </div>

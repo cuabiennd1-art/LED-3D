@@ -980,7 +980,7 @@ export default function ProductDetailPage() {
                 </span>
               </Link>
               <span className={styles.mobileSold}>
-                Đã bán {product.soldCount ?? product.sold ?? 0}
+                Đã bán {Number(product.soldCount ?? product.sold ?? 0).toLocaleString('vi-VN')}
               </span>
               <span className={styles.mobileStock}>
                 {isProductOutOfStock ? (
@@ -1487,7 +1487,7 @@ export default function ProductDetailPage() {
                 </span>
                 <span className={styles.metaDivider}>•</span>
                 <span className={styles.sold}>
-                  Đã bán {product.soldCount ?? product.sold ?? 0}
+                  Đã bán {Number(product.soldCount ?? product.sold ?? 0).toLocaleString('vi-VN')}
                 </span>
                 <span className={styles.metaDivider}>•</span>
                 <span className={styles.stock}>
