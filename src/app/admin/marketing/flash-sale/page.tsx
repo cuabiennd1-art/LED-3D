@@ -121,6 +121,8 @@ export default function AdminFlashSalePage() {
     enableCheckoutTimer: true,
     checkoutTimerMinutes: 15,
     enableViewerCount: true,
+    enableProductTimer: true,
+    productTimerMinutes: 10,
   });
 
   // Bulk discount & Variant Preview states
@@ -1200,6 +1202,49 @@ export default function AdminFlashSalePage() {
             </div>
           </div>
 
+          {/* Product Offer/Reservation Countdown Timer */}
+          <div className={styles.fomoOption}>
+            <div className={styles.fomoOptionHeader}>
+              <span className={styles.fomoOptionTitle}>⚡ Đồng hồ giữ đơn tại chi tiết sản phẩm</span>
+              <label className={styles.switch}>
+                <input
+                  type="checkbox"
+                  checked={fomoSettings.enableProductTimer !== false}
+                  onChange={(e) =>
+                    setFomoSettings((prev: any) => ({
+                      ...prev,
+                      enableProductTimer: e.target.checked,
+                    }))
+                  }
+                />
+                <span className={styles.slider}></span>
+              </label>
+            </div>
+            <p className={styles.fomoOptionDesc}>
+              Hiển thị đồng hồ đếm ngược giữ giá ưu đãi kèm thanh tiến trình tại trang chi tiết sản phẩm để thôi thúc khách bấm <strong>Mua Ngay</strong>.
+            </p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
+              <span style={{ fontSize: '0.8125rem', color: 'var(--admin-text-muted, #9ca3af)' }}>
+                Thời gian đếm ngược:
+              </span>
+              <input
+                type="number"
+                min={3}
+                max={60}
+                value={fomoSettings.productTimerMinutes || 10}
+                onChange={(e) =>
+                  setFomoSettings((prev: any) => ({
+                    ...prev,
+                    productTimerMinutes: Number(e.target.value) || 10,
+                  }))
+                }
+                className={styles.input}
+                style={{ width: 70, padding: '4px 8px' }}
+              />
+              <span style={{ fontSize: '0.8125rem' }}>phút</span>
+            </div>
+          </div>
+
           {/* Real-time viewer count */}
           <div className={styles.fomoOption}>
             <div className={styles.fomoOptionHeader}>
@@ -1209,7 +1254,7 @@ export default function AdminFlashSalePage() {
                   type="checkbox"
                   checked={fomoSettings.enableViewerCount}
                   onChange={(e) =>
-                    setFomoSettings((prev) => ({
+                    setFomoSettings((prev: any) => ({
                       ...prev,
                       enableViewerCount: e.target.checked,
                     }))

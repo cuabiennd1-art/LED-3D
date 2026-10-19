@@ -32,6 +32,8 @@ export interface IFomoSettings {
   enableCheckoutTimer: boolean;
   checkoutTimerMinutes: number;
   enableViewerCount: boolean;
+  enableProductTimer?: boolean;
+  productTimerMinutes?: number;
 }
 
 export interface IFlashSale extends Document {
@@ -87,6 +89,8 @@ const FomoSettingsSchema = new Schema<IFomoSettings>(
     enableCheckoutTimer: { type: Boolean, default: true },
     checkoutTimerMinutes: { type: Number, default: 15, min: 5, max: 60 },
     enableViewerCount: { type: Boolean, default: true },
+    enableProductTimer: { type: Boolean, default: true },
+    productTimerMinutes: { type: Number, default: 10, min: 3, max: 60 },
   },
   { _id: false }
 );

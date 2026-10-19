@@ -16,6 +16,8 @@ export async function GET() {
       enableCheckoutTimer: true,
       checkoutTimerMinutes: 15,
       enableViewerCount: true,
+      enableProductTimer: true,
+      productTimerMinutes: 10,
     };
 
     return NextResponse.json(

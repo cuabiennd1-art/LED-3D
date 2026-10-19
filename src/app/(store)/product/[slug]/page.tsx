@@ -22,6 +22,7 @@ import {
   FiCamera,
   FiCheckCircle,
   FiZap,
+  FiClock,
   FiChevronDown,
   FiChevronUp,
   FiPackage,
@@ -187,6 +188,10 @@ export default function ProductDetailPage() {
   const [flashSaleItem, setFlashSaleItem] = useState<any | null>(null);
   const [flashCountdown, setFlashCountdown] = useState({ hours: '00', minutes: '00', seconds: '00' });
   const [fomoSettings, setFomoSettings] = useState<any>(null);
+
+  // Product Offer Reservation Timer State (Đồng hồ giữ đơn / giữ ưu đãi tại chi tiết sản phẩm)
+  const [productReservationSeconds, setProductReservationSeconds] = useState<number>(0);
+  const [productReservationTotalSeconds, setProductReservationTotalSeconds] = useState<number>(600);
 
   // Reviews preview state
   const [reviewsPreview, setReviewsPreview] = useState<any[]>([]);
@@ -536,6 +541,58 @@ export default function ProductDetailPage() {
     const timer = setInterval(updateCountdown, 1000);
     return () => clearInterval(timer);
   }, [flashSaleItem]);
+
+  // Product Offer Reservation Countdown Timer (Đồng hồ giữ đơn tại chi tiết sản phẩm)
+  useEffect(() => {
+    if (!fomoSettings || fomoSettings.enableProductTimer === false || !product?._id) {
+      setProductReservationSeconds(0);
+      return;
+    }
+
+    const durationMins = Number(fomoSettings.productTimerMinutes) || 10;
+    const totalSecs = durationMins * 60;
+    setProductReservationTotalSeconds(totalSecs);
+
+    const storageKey = `fomo_p_timer_${product._id}`;
+    let expireTime = 0;
+
+    try {
+      const saved = sessionStorage.getItem(storageKey);
+      if (saved) {
+        expireTime = parseInt(saved, 10);
+      }
+    } catch (e) {}
+
+    const now = Date.now();
+    if (!expireTime || expireTime <= now) {
+      expireTime = now + totalSecs * 1000;
+      try {
+        sessionStorage.setItem(storageKey, String(expireTime));
+      } catch (e) {}
+    }
+
+    const initialRemaining = Math.max(0, Math.round((expireTime - now) / 1000));
+    setProductReservationSeconds(initialRemaining);
+
+    const timer = setInterval(() => {
+      const currentTime = Date.now();
+      const diff = Math.round((expireTime - currentTime) / 1000);
+      if (diff <= 0) {
+        // Tự động gia hạn thêm một chu kỳ ngắn (ví dụ 5 phút) để duy trì cảm giác khẩn trương liên tục
+        const loopMins = Math.min(5, durationMins);
+        expireTime = Date.now() + loopMins * 60 * 1000;
+        try {
+          sessionStorage.setItem(storageKey, String(expireTime));
+        } catch (e) {}
+        setProductReservationTotalSeconds(loopMins * 60);
+        setProductReservationSeconds(loopMins * 60);
+      } else {
+        setProductReservationSeconds(diff);
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [fomoSettings, product?._id]);
 
   // Fetch related products ("Có thể bạn cũng thích" - CHỈ HIỂN THỊ SẢN PHẨM CÙNG LOẠI DANH MỤC)
   useEffect(() => {
@@ -1780,6 +1837,39 @@ export default function ProductDetailPage() {
                 <FiZap /> 🔥 <strong>18 người</strong> đang cùng xem sản phẩm này
               </div>
             )}
+
+            {/* Product Offer Reservation Timer (Đồng hồ giữ đơn tại chi tiết sản phẩm) */}
+            {fomoSettings && fomoSettings.enableProductTimer !== false && productReservationSeconds > 0 && (
+              <div className={styles.productReservationBanner}>
+                <div className={styles.productReservationTop}>
+                  <div className={styles.productReservationLeft}>
+                    <span className={styles.productReservationPulse} />
+                    <FiClock className={styles.productReservationIcon} />
+                    <span className={styles.productReservationTitle}>Ưu đãi của bạn được giữ trong:</span>
+                  </div>
+                  <div className={styles.productReservationCountdown}>
+                    <span className={styles.productReservationDigit}>
+                      {String(Math.floor(productReservationSeconds / 60)).padStart(2, '0')}
+                    </span>
+                    <span className={styles.productReservationColon}>:</span>
+                    <span className={styles.productReservationDigit}>
+                      {String(productReservationSeconds % 60).padStart(2, '0')}
+                    </span>
+                  </div>
+                </div>
+                <div className={styles.productReservationTrack}>
+                  <div
+                    className={styles.productReservationBar}
+                    style={{
+                      width: `${productReservationTotalSeconds > 0 ? Math.min(100, Math.max(2, (productReservationSeconds / productReservationTotalSeconds) * 100)) : 100}%`,
+                    }}
+                  />
+                </div>
+                <div className={styles.productReservationBottom}>
+                  <span>⚡ Nhanh tay đặt hàng trước khi hết thời gian giữ ưu đãi</span>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* 2.5 Voucher Collection Bar */}
@@ -2543,6 +2633,39 @@ export default function ProductDetailPage() {
               {fomoSettings && fomoSettings.enableViewerCount === true && (
                 <div className={styles.viewerCountNotice}>
                   <FiZap size={13} /> 🔥 <strong>18 người</strong> đang cùng xem sản phẩm này
+                </div>
+              )}
+
+              {/* Product Offer Reservation Timer (Đồng hồ giữ đơn tại chi tiết sản phẩm) */}
+              {fomoSettings && fomoSettings.enableProductTimer !== false && productReservationSeconds > 0 && (
+                <div className={styles.productReservationBanner}>
+                  <div className={styles.productReservationTop}>
+                    <div className={styles.productReservationLeft}>
+                      <span className={styles.productReservationPulse} />
+                      <FiClock className={styles.productReservationIcon} />
+                      <span className={styles.productReservationTitle}>Ưu đãi của bạn được giữ trong:</span>
+                    </div>
+                    <div className={styles.productReservationCountdown}>
+                      <span className={styles.productReservationDigit}>
+                        {String(Math.floor(productReservationSeconds / 60)).padStart(2, '0')}
+                      </span>
+                      <span className={styles.productReservationColon}>:</span>
+                      <span className={styles.productReservationDigit}>
+                        {String(productReservationSeconds % 60).padStart(2, '0')}
+                      </span>
+                    </div>
+                  </div>
+                  <div className={styles.productReservationTrack}>
+                    <div
+                      className={styles.productReservationBar}
+                      style={{
+                        width: `${productReservationTotalSeconds > 0 ? Math.min(100, Math.max(2, (productReservationSeconds / productReservationTotalSeconds) * 100)) : 100}%`,
+                      }}
+                    />
+                  </div>
+                  <div className={styles.productReservationBottom}>
+                    <span>⚡ Nhanh tay đặt hàng trước khi hết thời gian giữ ưu đãi</span>
+                  </div>
                 </div>
               )}
             </div>
