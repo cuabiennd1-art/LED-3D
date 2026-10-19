@@ -203,15 +203,15 @@ export default function CheckoutPage() {
   // Calculate voucher discount amount
   const voucherDiscountAmount = selectedVoucher
     ? (selectedVoucher.discountAmount !== undefined
-        ? selectedVoucher.discountAmount
-        : selectedVoucher.discountType === 'fixed'
+      ? selectedVoucher.discountAmount
+      : selectedVoucher.discountType === 'fixed'
         ? Math.min(selectedVoucher.discountValue, checkoutSubtotal)
         : Math.min(
-            Math.round((checkoutSubtotal * selectedVoucher.discountValue) / 100),
-            selectedVoucher.maxDiscountAmount && selectedVoucher.maxDiscountAmount > 0
-              ? selectedVoucher.maxDiscountAmount
-              : checkoutSubtotal
-          ))
+          Math.round((checkoutSubtotal * selectedVoucher.discountValue) / 100),
+          selectedVoucher.maxDiscountAmount && selectedVoucher.maxDiscountAmount > 0
+            ? selectedVoucher.maxDiscountAmount
+            : checkoutSubtotal
+        ))
     : 0;
 
   // Free shipping policy (0đ)
@@ -411,7 +411,7 @@ export default function CheckoutPage() {
               const updatedVouchers = storedVouchers.filter((c: string) => c !== selectedVoucher.code);
               localStorage.setItem('shopbig_saved_vouchers', JSON.stringify(updatedVouchers));
               window.dispatchEvent(new CustomEvent('shopbig_voucher_saved'));
-            } catch (e) {}
+            } catch (e) { }
           }
         } catch (e) {
           console.error('Error saving profile or order code locally:', e);
@@ -421,7 +421,7 @@ export default function CheckoutPage() {
           // Lưu danh sách sản phẩm chờ thanh toán vào sessionStorage
           try {
             sessionStorage.setItem('shopbig_pending_payment_items', JSON.stringify(activeItems));
-          } catch (e) {}
+          } catch (e) { }
 
           router.push(`/payment?orderId=${data.data._id}&code=${data.data.orderCode}`);
         } else {
@@ -672,27 +672,7 @@ export default function CheckoutPage() {
           </div>
 
           <div className={styles.paymentList}>
-            {paymentConfig.bankTransferEnabled && (
-              <div
-                className={`${styles.paymentOption} ${paymentMethod === 'bank_transfer' ? styles.paymentActive : ''}`}
-                onClick={() => setPaymentMethod('bank_transfer')}
-              >
-                <input
-                  type="radio"
-                  name="payment"
-                  checked={paymentMethod === 'bank_transfer'}
-                  onChange={() => setPaymentMethod('bank_transfer')}
-                />
-                <div className={styles.paymentOptionInfo}>
-                  <span className={styles.paymentOptionTitle}>
-                    ⚡ Chuyển khoản VietQR (SePay Tự Động)
-                  </span>
-                  <span className={styles.paymentOptionDesc}>
-                    Quét mã QR qua mọi ứng dụng ngân hàng, xác nhận trong 3 giây
-                  </span>
-                </div>
-              </div>
-            )}
+
 
             {paymentConfig.codEnabled && (
               <div
