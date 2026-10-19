@@ -797,6 +797,16 @@ export default function ProductDescriptionEditor({
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
+
+      // Cảnh báo giới hạn payload 4.5 MB của Vercel Serverless
+      if (file.size > 4.5 * 1024 * 1024) {
+        toast.error(
+          `Video "${file.name}" (${sizeMb} MB) vượt quá giới hạn 4.5 MB của Vercel Serverless. Vui lòng nén video dưới 4.5 MB hoặc bấm "Link Ảnh/Video" để dán link YouTube/TikTok!`,
+          { duration: 7000 }
+        );
+        continue;
+      }
+
       setUploadStatus(`Đang tải video "${file.name}" (${sizeMb} MB) lưu vào CSDL MongoDB...`);
 
       try {
@@ -808,12 +818,26 @@ export default function ProductDescriptionEditor({
           body: formData,
         });
 
-        const data = await res.json();
-        if (data.success && data.data?.url) {
+        if (res.status === 413) {
+          toast.error(
+            `Lỗi 413: Video (${sizeMb} MB) vượt quá giới hạn 4.5 MB của Vercel. Vui lòng nén video hoặc dùng link YouTube / TikTok!`,
+            { duration: 7000 }
+          );
+          continue;
+        }
+
+        let data: any = null;
+        try {
+          data = await res.json();
+        } catch (parseErr) {
+          // Res is not JSON (e.g. HTML error from proxy)
+        }
+
+        if (data && data.success && data.data?.url) {
           insertVideoElement(data.data.url, false);
           successCount++;
         } else {
-          toast.error(data.message || `Lỗi khi tải video ${file.name}`);
+          toast.error(data?.message || `Lỗi khi tải video ${file.name} (Mã lỗi HTTP ${res.status})`);
         }
       } catch (err: any) {
         toast.error(`Không thể upload video ${file.name}: ${err.message || 'Lỗi mạng'}`);

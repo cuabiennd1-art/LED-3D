@@ -254,18 +254,6 @@ export async function POST(request: Request) {
       console.warn('Revalidate layout path failed:', revalErr);
     }
 
-    // Regenerate PWA and favicon assets in the background if logo/favicon exists
-    try {
-      const { fork } = require('child_process');
-      const path = require('path');
-      const scriptPath = path.join(process.cwd(), 'scripts', 'generate-pwa-icons.js');
-      const iconUrl = updatedConfig.pageTitles?.faviconUrl || updatedConfig.pageTitles?.logoUrl;
-      const child = fork(scriptPath, iconUrl ? [path.join(process.cwd(), 'public', iconUrl.replace(/^\//, ''))] : []);
-      child.unref();
-    } catch (iconGenErr) {
-      console.warn('PWA icon generation background process error:', iconGenErr);
-    }
-
     return NextResponse.json({
       success: true,
       message: 'Cập nhật cấu hình theme & giao diện thành công!',

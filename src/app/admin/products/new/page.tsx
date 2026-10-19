@@ -74,8 +74,15 @@ export default function NewProductPage() {
         const formData = new FormData();
         formData.append('file', files[i]);
         const res = await apiFetch('/api/upload', { method: 'POST', body: formData });
-        const data = await res.json();
-        if (data.success && data.data?.url) {
+        if (res.status === 413) {
+          toast.error(`Ảnh ${files[i].name} vượt quá 4.5MB giới hạn của Vercel`);
+          continue;
+        }
+        let data: any = null;
+        try {
+          data = await res.json();
+        } catch {}
+        if (data?.success && data.data?.url) {
           uploadedUrls.push(data.data.url);
         }
       }
