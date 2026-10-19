@@ -133,12 +133,32 @@ export function sanitizeAndTransformRichDescription(html?: string | null): strin
     return match;
   });
 
-  // 4. Đảm bảo tất cả thẻ <video> đều có playsinline, muted, loop, preload="auto", và #t=0.001
-  // để hỗ trợ hiển thị ảnh khung hình đầu tiên (tránh màn hình đen trên Safari/iOS) và tự động phát khi cuộn
-  transformed = transformed.replace(/<video\b([^>]*)>/gi, (match, attrs) => {
+  // 4. Đảm bảo tất cả thẻ <video> trong mô tả sản phẩm đều chạy nội tuyến (INLINE), không mở fullscreen trên iPhone
+  // Bỏ controls native (nguyên nhân gây ép fullscreen trên iOS), thêm playsinline, webkit-playsinline, x5-playsinline, controlslist="nofullscreen"
+  // Bổ sung giao diện điều khiển nội tuyến: nút Bật/Tắt tiếng, Phóng to, và nút Tạm dừng/Phát theo chuẩn Shopee
+  const wrapVideoTag = (attrs: string, inner: string = '') => {
     let newAttrs = attrs;
+    // Xóa bỏ hoàn toàn thuộc tính controls native để chặn đứng iOS Safari tự động nhảy fullscreen
+    newAttrs = newAttrs.replace(/\bcontrols(=["'][^"']*["'])?/gi, '');
+
+    // Đảm bảo đầy đủ các thuộc tính bắt buộc của iOS WebKit / Mobile
     if (!/\bplaysinline\b/i.test(newAttrs)) {
       newAttrs += ' playsinline';
+    }
+    if (!/\bwebkit-playsinline\b/i.test(newAttrs)) {
+      newAttrs += ' webkit-playsinline="true"';
+    }
+    if (!/\bx5-playsinline\b/i.test(newAttrs)) {
+      newAttrs += ' x5-playsinline="true"';
+    }
+    if (!/\bcontrolslist\b/i.test(newAttrs)) {
+      newAttrs += ' controlslist="nofullscreen nodownload noremoteplayback"';
+    }
+    if (!/\bdisablepictureinpicture\b/i.test(newAttrs)) {
+      newAttrs += ' disablepictureinpicture="true"';
+    }
+    if (!/\bdisableremoteplayback\b/i.test(newAttrs)) {
+      newAttrs += ' disableremoteplayback="true"';
     }
     if (!/\bmuted\b/i.test(newAttrs)) {
       newAttrs += ' muted';
@@ -151,10 +171,42 @@ export function sanitizeAndTransformRichDescription(html?: string | null): strin
     } else {
       newAttrs = newAttrs.replace(/preload=["'][^"']*["']/i, 'preload="auto"');
     }
+
+    // Tinh chỉnh style inline của video để vừa khít container và vô hiệu hóa bắt sự kiện native
+    if (/style=["']/i.test(newAttrs)) {
+      newAttrs = newAttrs.replace(/style=["']([^"']*)["']/i, (_sMatch: string, sVal: string) => {
+        return `style="${sVal}; width: 100%; height: auto; display: block; object-fit: contain; pointer-events: none;"`;
+      });
+    } else {
+      newAttrs += ' style="width: 100%; height: auto; display: block; object-fit: contain; pointer-events: none;"';
+    }
+
     // Gắn #t=0.001 vào link mp4 để iOS Safari hiển thị ngay khung hình đầu tiên làm thumbnail thay vì khung đen
     newAttrs = newAttrs.replace(/src=["']([^"']+\.mp4)(?:#[^"']*)?["']/i, 'src="$1#t=0.001"');
 
-    return `<video${newAttrs}>`;
+    return `<div class="desc-video-container" style="position: relative; margin: 16px auto; max-width: 100%; border-radius: 12px; overflow: hidden; background: #000; display: block; box-shadow: 0 4px 16px rgba(0,0,0,0.25); cursor: pointer;">
+      <video ${newAttrs}>${inner}</video>
+      <div class="desc-video-play-btn" style="position: absolute; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.35); z-index: 2; pointer-events: none;">
+        <div style="width: 48px; height: 48px; border-radius: 50%; background: rgba(255,255,255,0.9); color: #000; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.4); padding-left: 3px; font-size: 20px;">▶</div>
+      </div>
+      <button type="button" class="desc-video-zoom-btn" style="position: absolute; top: 10px; right: 10px; width: 30px; height: 30px; border-radius: 50%; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,0.25); color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 3;" title="Phóng to video">⛶</button>
+      <button type="button" class="desc-video-sound-btn" style="position: absolute; bottom: 12px; right: 12px; height: 26px; padding: 0 10px; border-radius: 13px; background: rgba(0,0,0,0.65); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,0.25); color: #fff; display: flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; cursor: pointer; z-index: 3;" title="Bật/Tắt âm thanh">🔇 <span>Bật tiếng</span></button>
+      <div class="desc-video-progress" style="position: absolute; bottom: 0; left: 0; right: 0; height: 3px; background: rgba(255,255,255,0.25); z-index: 3; pointer-events: none;">
+        <div class="desc-video-progress-bar" style="height: 100%; width: 0%; background: #ee4d2d; transition: width 0.1s linear;"></div>
+      </div>
+    </div>`;
+  };
+
+  const videoBlockRegex = /<video\b([^>]*)>([\s\S]*?)<\/video>/gi;
+  transformed = transformed.replace(videoBlockRegex, (match, attrs, inner) => {
+    if (match.includes('desc-video-container')) return match;
+    return wrapVideoTag(attrs, inner);
+  });
+
+  // Xử lý các thẻ <video> đơn lẻ (không có thẻ đóng </video>)
+  transformed = transformed.replace(/<video\b([^>]*)>(?![\s\S]*?<\/video>)/gi, (match, attrs) => {
+    if (match.includes('desc-video-container')) return match;
+    return wrapVideoTag(attrs, '');
   });
 
   return transformed;

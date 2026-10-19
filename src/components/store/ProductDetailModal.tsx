@@ -507,6 +507,7 @@ export default function ProductDetailModal({
                     src={images[activeImageIndex] || images[0]}
                     muted
                     playsInline
+                    {...({ 'webkit-playsinline': 'true', 'x5-playsinline': 'true' } as any)}
                     className={styles.thumbnailImg}
                     style={{ objectFit: 'cover' }}
                   />
@@ -727,6 +728,7 @@ export default function ProductDetailModal({
                 controls
                 autoPlay
                 playsInline
+                {...({ 'webkit-playsinline': 'true', 'x5-playsinline': 'true' } as any)}
                 className={styles.lightboxImg}
                 style={{ maxHeight: '90vh', maxWidth: '90vw' }}
               />

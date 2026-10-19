@@ -29,6 +29,9 @@ import {
   FiMaximize2,
   FiUser,
   FiHome,
+  FiVolume2,
+  FiVolumeX,
+  FiPlay,
 } from 'react-icons/fi';
 import ZaloIcon from '@/components/ui/ZaloIcon';
 import toast from 'react-hot-toast';
@@ -103,6 +106,43 @@ export default function ProductDetailPage() {
   const [quantity, setQuantity] = useState(1);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [isGalleryPaused, setIsGalleryPaused] = useState(false);
+
+  // Video player custom controls (plays inline on iOS/iPhone without forcing fullscreen)
+  const [isVideoMuted, setIsVideoMuted] = useState(true);
+  const [isVideoPlaying, setIsVideoPlaying] = useState(true);
+  const [videoProgress, setVideoProgress] = useState(0);
+  const mobileVideoRef = React.useRef<HTMLVideoElement | null>(null);
+  const desktopVideoRef = React.useRef<HTMLVideoElement | null>(null);
+
+  const toggleVideoPlayPause = (e: React.MouseEvent, isMobile = true) => {
+    e.stopPropagation();
+    const vid = isMobile ? mobileVideoRef.current : desktopVideoRef.current;
+    if (!vid) return;
+    if (vid.paused) {
+      vid.play()
+        .then(() => setIsVideoPlaying(true))
+        .catch(() => {});
+    } else {
+      vid.pause();
+      setIsVideoPlaying(false);
+    }
+  };
+
+  const toggleVideoSound = (e: React.MouseEvent, isMobile = true) => {
+    e.stopPropagation();
+    const vid = isMobile ? mobileVideoRef.current : desktopVideoRef.current;
+    if (!vid) return;
+    const nextMuted = !vid.muted;
+    vid.muted = nextMuted;
+    setIsVideoMuted(nextMuted);
+  };
+
+  const handleVideoTimeUpdate = (e: React.SyntheticEvent<HTMLVideoElement>) => {
+    const vid = e.currentTarget;
+    if (vid.duration && vid.duration > 0) {
+      setVideoProgress((vid.currentTime / vid.duration) * 100);
+    }
+  };
 
 
 
@@ -1017,19 +1057,78 @@ export default function ProductDetailPage() {
     setIsExpandModalOpen(true);
   };
 
-  // Handle click on images inside product description to open Lightbox
-  const handleDescriptionImageClick = (e: React.MouseEvent<HTMLDivElement>) => {
+  // Xử lý click trong phần mô tả sản phẩm (phóng to ảnh hoặc tương tác điều khiển video nội tuyến Shopee)
+  const handleDescriptionClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement;
-    if (target && target.tagName === 'IMG') {
+    if (!target) return;
+
+    // 1. Click nút phóng to của video -> Mở Lightbox xem video toàn màn hình
+    const zoomBtn = target.closest('.desc-video-zoom-btn');
+    if (zoomBtn) {
+      e.stopPropagation();
+      e.preventDefault();
+      const container = zoomBtn.closest('.desc-video-container');
+      const video = container?.querySelector('video') as HTMLVideoElement | null;
+      const src = video?.currentSrc || video?.src || video?.querySelector('source')?.getAttribute('src');
+      if (src) {
+        if (video && !video.paused) {
+          video.pause();
+        }
+        setLightboxImage(src);
+      }
+      return;
+    }
+
+    // 2. Click nút Bật / Tắt tiếng của video
+    const soundBtn = target.closest('.desc-video-sound-btn') as HTMLElement | null;
+    if (soundBtn) {
+      e.stopPropagation();
+      e.preventDefault();
+      const container = soundBtn.closest('.desc-video-container');
+      const video = container?.querySelector('video') as HTMLVideoElement | null;
+      if (video) {
+        video.muted = !video.muted;
+        if (video.muted) {
+          soundBtn.innerHTML = '🔇 <span>Bật tiếng</span>';
+        } else {
+          soundBtn.innerHTML = '🔊 <span>Tắt tiếng</span>';
+        }
+      }
+      return;
+    }
+
+    // 3. Click vào container video -> Tạm dừng hoặc tiếp tục phát video
+    const container = target.closest('.desc-video-container');
+    if (container) {
+      e.stopPropagation();
+      e.preventDefault();
+      const video = container.querySelector('video') as HTMLVideoElement | null;
+      const playOverlay = container.querySelector('.desc-video-play-btn') as HTMLElement | null;
+      if (video) {
+        if (video.paused) {
+          video.play().then(() => {
+            if (playOverlay) playOverlay.style.display = 'none';
+          }).catch(() => {});
+        } else {
+          video.pause();
+          if (playOverlay) playOverlay.style.display = 'flex';
+        }
+      }
+      return;
+    }
+
+    // 4. Click vào ảnh -> Mở Lightbox phóng to ảnh
+    if (target.tagName === 'IMG') {
       const src = (target as HTMLImageElement).src;
       if (src) {
         e.stopPropagation();
         setLightboxImage(src);
       }
+      return;
     }
   };
 
-  // Tự động phát video trong phần Chi Tiết Sản Phẩm khi lướt tới, dừng khi lướt qua
+  // Tự động phát video trong phần Chi Tiết Sản Phẩm khi lướt tới, dừng khi lướt qua (chuẩn Shopee, chống bung fullscreen iPhone)
   useEffect(() => {
     if (loading || !product?.description) return;
 
@@ -1056,13 +1155,20 @@ export default function ProductDetailPage() {
         const isVisible = rect.top < windowHeight * 0.85 && rect.bottom > windowHeight * 0.15;
         const wasVisible = visibleMap.get(video) || false;
 
+        const container = video.closest('.desc-video-container');
+        const playOverlay = container?.querySelector('.desc-video-play-btn') as HTMLElement | null;
+
         if (isVisible && !wasVisible) {
           visibleMap.set(video, true);
           const playPromise = video.play();
           if (playPromise !== undefined) {
-            playPromise.catch(() => {
+            playPromise.then(() => {
+              if (playOverlay) playOverlay.style.display = 'none';
+            }).catch(() => {
               video.muted = true;
-              video.play().catch(() => {});
+              video.play().then(() => {
+                if (playOverlay) playOverlay.style.display = 'none';
+              }).catch(() => {});
             });
           }
         } else if (!isVisible && wasVisible) {
@@ -1070,6 +1176,7 @@ export default function ProductDetailPage() {
           if (!video.paused) {
             video.pause();
           }
+          if (playOverlay) playOverlay.style.display = 'none';
         }
       });
     };
@@ -1085,12 +1192,18 @@ export default function ProductDetailPage() {
         observer = null;
       }
 
-      // Cấu hình các video: muted, playsinline, loop, preload="auto", #t=0.001
+      // Cấu hình các video: triệt tiêu controls native (chặn đứng iOS fullscreen), thiết lập inline chuẩn WebKit
       videoElements.forEach((vid) => {
+        vid.removeAttribute('controls');
         vid.muted = true;
         vid.defaultMuted = true;
         vid.playsInline = true;
         vid.setAttribute('playsinline', '');
+        vid.setAttribute('webkit-playsinline', 'true');
+        vid.setAttribute('x5-playsinline', 'true');
+        vid.setAttribute('controlslist', 'nofullscreen nodownload noremoteplayback');
+        vid.setAttribute('disablepictureinpicture', 'true');
+        vid.setAttribute('disableremoteplayback', 'true');
         vid.setAttribute('muted', '');
         vid.loop = true;
         vid.setAttribute('loop', '');
@@ -1099,6 +1212,28 @@ export default function ProductDetailPage() {
         if (vid.src && vid.src.includes('.mp4') && !vid.src.includes('#')) {
           vid.src = vid.src + '#t=0.001';
         }
+
+        // Lắng nghe sự kiện để cập nhật thanh tiến trình và overlay nút play
+        const container = vid.closest('.desc-video-container');
+        const playOverlay = container?.querySelector('.desc-video-play-btn') as HTMLElement | null;
+        const progressBar = container?.querySelector('.desc-video-progress-bar') as HTMLElement | null;
+
+        vid.ontimeupdate = () => {
+          if (progressBar && vid.duration && !isNaN(vid.duration)) {
+            const pct = Math.min(100, Math.max(0, (vid.currentTime / vid.duration) * 100));
+            progressBar.style.width = `${pct}%`;
+          }
+        };
+
+        vid.onplay = () => {
+          if (playOverlay) playOverlay.style.display = 'none';
+        };
+
+        vid.onpause = () => {
+          if (playOverlay && visibleMap.get(vid)) {
+            playOverlay.style.display = 'flex';
+          }
+        };
       });
 
       // 1. IntersectionObserver tiêu chuẩn
@@ -1109,13 +1244,20 @@ export default function ProductDetailPage() {
             const isVisible = entry.isIntersecting && entry.intersectionRatio >= 0.2;
             const wasVisible = visibleMap.get(video) || false;
 
+            const container = video.closest('.desc-video-container');
+            const playOverlay = container?.querySelector('.desc-video-play-btn') as HTMLElement | null;
+
             if (isVisible && !wasVisible) {
               visibleMap.set(video, true);
               const playPromise = video.play();
               if (playPromise !== undefined) {
-                playPromise.catch(() => {
+                playPromise.then(() => {
+                  if (playOverlay) playOverlay.style.display = 'none';
+                }).catch(() => {
                   video.muted = true;
-                  video.play().catch(() => {});
+                  video.play().then(() => {
+                    if (playOverlay) playOverlay.style.display = 'none';
+                  }).catch(() => {});
                 });
               }
             } else if (!isVisible && wasVisible) {
@@ -1123,6 +1265,7 @@ export default function ProductDetailPage() {
               if (!video.paused) {
                 video.pause();
               }
+              if (playOverlay) playOverlay.style.display = 'none';
             }
           });
         },
@@ -1195,7 +1338,7 @@ export default function ProductDetailPage() {
       return (
         <div
           className={`${extraClass} ${styles.richDescription}`}
-          onClick={handleDescriptionImageClick}
+          onClick={handleDescriptionClick}
           dangerouslySetInnerHTML={{ __html: sanitized }}
         />
       );
@@ -1313,32 +1456,173 @@ export default function ProductDetailPage() {
             }}
           >
             {isVideoUrl(images[activeImageIndex] || images[0]) ? (
-              <div style={{ width: '100%', height: '100%', position: 'relative', background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  position: 'relative',
+                  background: '#000',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  overflow: 'hidden',
+                  cursor: 'pointer',
+                }}
+                onClick={(e) => toggleVideoPlayPause(e, true)}
+              >
                 <video
                   key={images[activeImageIndex] || images[0]}
                   src={images[activeImageIndex] || images[0]}
-                  controls
                   playsInline
                   autoPlay
-                  muted
+                  muted={isVideoMuted}
                   preload="auto"
+                  controls={false}
+                  disablePictureInPicture
+                  controlsList="nofullscreen nodownload noremoteplayback"
+                  {...({ 'webkit-playsinline': 'true', 'x5-playsinline': 'true' } as any)}
                   ref={(el) => {
+                    mobileVideoRef.current = el;
                     if (el) {
-                      el.muted = true;
+                      el.setAttribute('playsinline', 'true');
+                      el.setAttribute('webkit-playsinline', 'true');
+                      el.setAttribute('x5-playsinline', 'true');
+                      el.setAttribute('controlsList', 'nofullscreen nodownload noremoteplayback');
+                      el.setAttribute('disablepictureinpicture', 'true');
+                      el.muted = isVideoMuted;
                       el.defaultMuted = true;
-                      el.play().catch(() => {});
+                      el.play()
+                        .then(() => setIsVideoPlaying(true))
+                        .catch(() => setIsVideoPlaying(false));
                     }
                   }}
+                  onPlay={() => setIsVideoPlaying(true)}
+                  onPause={() => setIsVideoPlaying(false)}
+                  onTimeUpdate={handleVideoTimeUpdate}
                   onCanPlay={(e) => {
-                    e.currentTarget.muted = true;
+                    e.currentTarget.muted = isVideoMuted;
                     e.currentTarget.play().catch(() => {});
                   }}
                   loop={images.length <= 1}
                   onEnded={handleVideoEnded}
                   onError={handleVideoEnded}
                   className={styles.mobileMainImage}
-                  style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                  style={{ width: '100%', height: '100%', objectFit: 'contain', pointerEvents: 'none' }}
                 />
+
+                {/* Center Play Icon when paused */}
+                {!isVideoPlaying && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      background: 'rgba(0, 0, 0, 0.35)',
+                      zIndex: 3,
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: 50,
+                        height: 50,
+                        borderRadius: '50%',
+                        background: 'rgba(255, 255, 255, 0.9)',
+                        color: '#000',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        boxShadow: '0 4px 14px rgba(0, 0, 0, 0.4)',
+                        paddingLeft: 3,
+                      }}
+                    >
+                      <FiPlay size={22} />
+                    </div>
+                  </div>
+                )}
+
+                {/* Top Right Maximize Button (Chỉ mở fullscreen khi người dùng chủ động bấm) */}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setLightboxImage(images[activeImageIndex] || images[0]);
+                  }}
+                  title="Phóng to video"
+                  style={{
+                    position: 'absolute',
+                    top: 12,
+                    right: 12,
+                    width: 32,
+                    height: 32,
+                    borderRadius: '50%',
+                    background: 'rgba(0, 0, 0, 0.55)',
+                    backdropFilter: 'blur(4px)',
+                    WebkitBackdropFilter: 'blur(4px)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    color: '#fff',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    zIndex: 4,
+                  }}
+                >
+                  <FiMaximize2 size={14} />
+                </button>
+
+                {/* Bottom Right Mute/Unmute Sound Button */}
+                <button
+                  type="button"
+                  onClick={(e) => toggleVideoSound(e, true)}
+                  title={isVideoMuted ? 'Bật âm thanh' : 'Tắt âm thanh'}
+                  style={{
+                    position: 'absolute',
+                    bottom: 14,
+                    right: 14,
+                    height: 28,
+                    padding: '0 10px',
+                    borderRadius: 14,
+                    background: 'rgba(0, 0, 0, 0.65)',
+                    backdropFilter: 'blur(4px)',
+                    WebkitBackdropFilter: 'blur(4px)',
+                    border: '1px solid rgba(255, 255, 255, 0.25)',
+                    color: '#fff',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 5,
+                    fontSize: 11,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    zIndex: 4,
+                  }}
+                >
+                  {isVideoMuted ? <FiVolumeX size={14} /> : <FiVolume2 size={14} />}
+                  <span>{isVideoMuted ? 'Bật tiếng' : 'Tắt tiếng'}</span>
+                </button>
+
+                {/* Slim Bottom Progress Bar */}
+                <div
+                  style={{
+                    position: 'absolute',
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    height: 3,
+                    background: 'rgba(255, 255, 255, 0.25)',
+                    zIndex: 4,
+                  }}
+                >
+                  <div
+                    style={{
+                      height: '100%',
+                      width: `${videoProgress}%`,
+                      background: 'var(--primary, #ee4d2d)',
+                      transition: 'width 0.15s linear',
+                    }}
+                  />
+                </div>
               </div>
             ) : (
               <img
@@ -1875,32 +2159,173 @@ export default function ProductDetailPage() {
               onMouseLeave={() => setIsGalleryPaused(false)}
             >
               {isVideoUrl(images[activeImageIndex] || images[0]) ? (
-                <div style={{ width: '100%', height: '100%', position: 'relative', background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    position: 'relative',
+                    background: '#000',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    overflow: 'hidden',
+                    cursor: 'pointer',
+                  }}
+                  onClick={(e) => toggleVideoPlayPause(e, false)}
+                >
                   <video
                     key={images[activeImageIndex] || images[0]}
                     src={images[activeImageIndex] || images[0]}
-                    controls
                     playsInline
                     autoPlay
-                    muted
+                    muted={isVideoMuted}
                     preload="auto"
+                    controls={false}
+                    disablePictureInPicture
+                    controlsList="nofullscreen nodownload noremoteplayback"
+                    {...({ 'webkit-playsinline': 'true', 'x5-playsinline': 'true' } as any)}
                     ref={(el) => {
+                      desktopVideoRef.current = el;
                       if (el) {
-                        el.muted = true;
+                        el.setAttribute('playsinline', 'true');
+                        el.setAttribute('webkit-playsinline', 'true');
+                        el.setAttribute('x5-playsinline', 'true');
+                        el.setAttribute('controlsList', 'nofullscreen nodownload noremoteplayback');
+                        el.setAttribute('disablepictureinpicture', 'true');
+                        el.muted = isVideoMuted;
                         el.defaultMuted = true;
-                        el.play().catch(() => {});
+                        el.play()
+                          .then(() => setIsVideoPlaying(true))
+                          .catch(() => setIsVideoPlaying(false));
                       }
                     }}
+                    onPlay={() => setIsVideoPlaying(true)}
+                    onPause={() => setIsVideoPlaying(false)}
+                    onTimeUpdate={handleVideoTimeUpdate}
                     onCanPlay={(e) => {
-                      e.currentTarget.muted = true;
+                      e.currentTarget.muted = isVideoMuted;
                       e.currentTarget.play().catch(() => {});
                     }}
                     loop={images.length <= 1}
                     onEnded={handleVideoEnded}
                     onError={handleVideoEnded}
                     className={styles.pcMainImage}
-                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                    style={{ width: '100%', height: '100%', objectFit: 'contain', pointerEvents: 'none' }}
                   />
+
+                  {/* Center Play Icon when paused */}
+                  {!isVideoPlaying && (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        inset: 0,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        background: 'rgba(0, 0, 0, 0.35)',
+                        zIndex: 3,
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: 56,
+                          height: 56,
+                          borderRadius: '50%',
+                          background: 'rgba(255, 255, 255, 0.9)',
+                          color: '#000',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          boxShadow: '0 4px 14px rgba(0, 0, 0, 0.4)',
+                          paddingLeft: 4,
+                        }}
+                      >
+                        <FiPlay size={26} />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Top Right Maximize Button */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setLightboxImage(images[activeImageIndex] || images[0]);
+                    }}
+                    title="Phóng to video"
+                    style={{
+                      position: 'absolute',
+                      top: 14,
+                      right: 14,
+                      width: 34,
+                      height: 34,
+                      borderRadius: '50%',
+                      background: 'rgba(0, 0, 0, 0.55)',
+                      backdropFilter: 'blur(4px)',
+                      WebkitBackdropFilter: 'blur(4px)',
+                      border: '1px solid rgba(255, 255, 255, 0.2)',
+                      color: '#fff',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      zIndex: 4,
+                    }}
+                  >
+                    <FiMaximize2 size={15} />
+                  </button>
+
+                  {/* Bottom Right Mute/Unmute Sound Button */}
+                  <button
+                    type="button"
+                    onClick={(e) => toggleVideoSound(e, false)}
+                    title={isVideoMuted ? 'Bật âm thanh' : 'Tắt âm thanh'}
+                    style={{
+                      position: 'absolute',
+                      bottom: 14,
+                      right: 14,
+                      height: 28,
+                      padding: '0 12px',
+                      borderRadius: 14,
+                      background: 'rgba(0, 0, 0, 0.65)',
+                      backdropFilter: 'blur(4px)',
+                      WebkitBackdropFilter: 'blur(4px)',
+                      border: '1px solid rgba(255, 255, 255, 0.25)',
+                      color: '#fff',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      fontSize: 12,
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      zIndex: 4,
+                    }}
+                  >
+                    {isVideoMuted ? <FiVolumeX size={15} /> : <FiVolume2 size={15} />}
+                    <span>{isVideoMuted ? 'Bật tiếng' : 'Tắt tiếng'}</span>
+                  </button>
+
+                  {/* Slim Bottom Progress Bar */}
+                  <div
+                    style={{
+                      position: 'absolute',
+                      bottom: 0,
+                      left: 0,
+                      right: 0,
+                      height: 3,
+                      background: 'rgba(255, 255, 255, 0.25)',
+                      zIndex: 4,
+                    }}
+                  >
+                    <div
+                      style={{
+                        height: '100%',
+                        width: `${videoProgress}%`,
+                        background: 'var(--primary, #ee4d2d)',
+                        transition: 'width 0.15s linear',
+                      }}
+                    />
+                  </div>
                 </div>
               ) : (
                 <img
@@ -2859,6 +3284,7 @@ export default function ProductDetailPage() {
               controls
               autoPlay
               playsInline
+              {...({ 'webkit-playsinline': 'true', 'x5-playsinline': 'true' } as any)}
               className={styles.lightboxImg}
               onClick={(e) => e.stopPropagation()}
               style={{ maxHeight: '90vh', maxWidth: '90vw' }}
