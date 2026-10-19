@@ -166,7 +166,7 @@ export default function CheckoutPage() {
   }, []);
 
   const [paymentConfig, setPaymentConfig] = useState({ codEnabled: true, bankTransferEnabled: true });
-  const [paymentMethod, setPaymentMethod] = useState<'bank_transfer' | 'cod'>('bank_transfer');
+  const [paymentMethod, setPaymentMethod] = useState<'bank_transfer' | 'cod'>('cod');
   const [submitting, setSubmitting] = useState(false);
   const [selectedVoucher, setSelectedVoucher] = useState<IVoucherOption | null>(null);
   const [isVoucherModalOpen, setIsVoucherModalOpen] = useState(false);
@@ -182,10 +182,10 @@ export default function CheckoutPage() {
           const bank = data.data.bankTransferEnabled !== false;
           setPaymentConfig({ codEnabled: cod, bankTransferEnabled: bank });
 
-          if (bank) {
-            setPaymentMethod('bank_transfer');
-          } else if (cod) {
+          if (cod) {
             setPaymentMethod('cod');
+          } else if (bank) {
+            setPaymentMethod('bank_transfer');
           }
         }
       } catch (e) {
@@ -672,7 +672,27 @@ export default function CheckoutPage() {
           </div>
 
           <div className={styles.paymentList}>
-
+            {/* {paymentConfig.bankTransferEnabled && (
+              <div
+                className={`${styles.paymentOption} ${paymentMethod === 'bank_transfer' ? styles.paymentActive : ''}`}
+                onClick={() => setPaymentMethod('bank_transfer')}
+              >
+                <input
+                  type="radio"
+                  name="payment"
+                  checked={paymentMethod === 'bank_transfer'}
+                  onChange={() => setPaymentMethod('bank_transfer')}
+                />
+                <div className={styles.paymentOptionInfo}>
+                  <span className={styles.paymentOptionTitle}>
+                    ⚡ Chuyển khoản VietQR (SePay Tự Động)
+                  </span>
+                  <span className={styles.paymentOptionDesc}>
+                    Quét mã QR qua mọi ứng dụng ngân hàng, xác nhận trong 3 giây
+                  </span>
+                </div>
+              </div>
+            )} */}
 
             {paymentConfig.codEnabled && (
               <div
