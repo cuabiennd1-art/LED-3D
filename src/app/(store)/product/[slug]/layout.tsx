@@ -3,6 +3,7 @@ import { headers } from 'next/headers';
 import connectToDatabase from '@/lib/mongodb';
 import Product from '@/models/Product';
 import Setting from '@/models/Setting';
+import { getProductCoverImage } from '@/lib/utils';
 
 export async function generateMetadata({
   params,
@@ -58,8 +59,8 @@ export async function generateMetadata({
       headersList.get('x-forwarded-proto') || (host.includes('localhost') ? 'http' : 'https');
     const baseUrl = `${proto}://${host}`;
 
-    // Resolve primary image
-    let rawImage = product.images?.[0] || product.image || '';
+    // Resolve primary image (skip video for OpenGraph / social sharing thumbnail)
+    let rawImage = getProductCoverImage(product, '');
     let absoluteImageUrl = rawImage;
     if (rawImage && !rawImage.startsWith('http://') && !rawImage.startsWith('https://')) {
       absoluteImageUrl = `${baseUrl}${rawImage.startsWith('/') ? '' : '/'}${rawImage}`;

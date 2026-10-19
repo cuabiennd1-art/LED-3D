@@ -3,6 +3,7 @@ import connectToDatabase from '@/lib/mongodb';
 import Order from '@/models/Order';
 import Product from '@/models/Product';
 import FlashSale from '@/models/FlashSale';
+import { getProductCoverImage } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
 
@@ -113,7 +114,7 @@ export async function GET() {
           buyer: buyer,
           location: city,
           productName: p.name,
-          productImage: p.images?.[0] || '/file.svg',
+          productImage: getProductCoverImage(p, '/file.svg'),
           timeAgo: `${minutesAgo} phút trước`,
           quantity: (idx % 2) + 1,
         });

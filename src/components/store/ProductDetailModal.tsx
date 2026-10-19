@@ -20,6 +20,7 @@ import {
   IProductOption,
   IVariantItem,
   findMatchingVariant,
+  normalizeAttrString,
 } from '@/lib/variant-helper';
 import styles from './ProductDetailModal.module.css';
 
@@ -47,8 +48,6 @@ export default function ProductDetailModal({
   const [quantity, setQuantity] = useState(1);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
-
-
 
   // Extract options
   const options: IProductOption[] = useMemo(() => {
@@ -87,7 +86,7 @@ export default function ProductDetailModal({
     return [];
   }, [product]);
 
-  // Extract normalized variants
+  // Extract normalized variants with complete flashPrice, originalPrice, and discountPercent
   const variants: IVariantItem[] = useMemo(() => {
     if (!product || !product.variants) return [];
     return product.variants.map((v: any, idx: number) => {
@@ -105,15 +104,24 @@ export default function ProductDetailModal({
         attributes: attrs,
         price: v.price !== undefined ? v.price : (product.salePrice || product.price),
         salePrice: v.salePrice,
+        flashPrice: v.flashPrice,
+        originalPrice: v.originalPrice || v.price || product?.price,
+        discountPercent: v.discountPercent,
         stock: v.stock ?? 0,
         image: v.image || '',
+        color: v.color,
+        size: v.size,
       };
     });
   }, [product]);
 
-  // Initialize selections when product opens
+  // Initialize selections when product opens - ONLY when product ID changes, preserving user selections across parent renders
+  const currentProductIdRef = React.useRef<string | null>(null);
+
   useEffect(() => {
-    if (product) {
+    const pId = product?._id ? String(product._id) : (product?.slug || null);
+    if (pId && pId !== currentProductIdRef.current) {
+      currentProductIdRef.current = pId;
       setQuantity(initialQuantity && initialQuantity > 0 ? initialQuantity : 1);
       setActiveImageIndex(0);
 
@@ -123,45 +131,101 @@ export default function ProductDetailModal({
       }
       setSelectedAttributes(initialSelection);
     }
-  }, [product, initialAttributes, initialQuantity]);
+  }, [product?._id, product?.slug, initialAttributes, initialQuantity]);
 
   // Resolve matching variant
   const matchedVariant = useMemo(() => {
     if (variants.length === 0) return null;
-    return findMatchingVariant(variants, selectedAttributes);
-  }, [variants, selectedAttributes]);
+    return findMatchingVariant(variants, selectedAttributes, options);
+  }, [variants, selectedAttributes, options]);
 
-  const flashPrice =
-    product?.flashPrice && Number(product.flashPrice) > 0 ? Number(product.flashPrice) : null;
+  const isFlash = Boolean(
+    product?.isFlashSale ||
+    (product?.flashPrice && Number(product.flashPrice) > 0)
+  );
+  const flashPercentVal = Number(product?.flashPercent || product?.flashSale?.flashPercent || 0);
+  const flashDiscountPct = Number(product?.discountPercent || product?.flashSale?.discountPercent || 0);
 
-  const currentPrice = flashPrice
-    ? flashPrice
-    : matchedVariant
-    ? (matchedVariant.salePrice && matchedVariant.salePrice > 0
-        ? matchedVariant.salePrice
-        : (product?.salePrice && product.salePrice > 0 && product.salePrice < (matchedVariant.price || product.price)
-            ? product.salePrice
-            : matchedVariant.price))
-    : (product?.salePrice && product.salePrice > 0 ? product.salePrice : (product?.price || 0));
+  const currentPrice = useMemo(() => {
+    if (matchedVariant) {
+      if (isFlash) {
+        if (matchedVariant.flashPrice && Number(matchedVariant.flashPrice) > 0) {
+          return Number(matchedVariant.flashPrice);
+        }
+        const vBase = (matchedVariant.salePrice && matchedVariant.salePrice > 0 && matchedVariant.salePrice < matchedVariant.price)
+          ? matchedVariant.salePrice
+          : (matchedVariant.price || product?.salePrice || product?.price || 0);
 
-  const originalPrice = flashPrice
-    ? (matchedVariant?.price || product?.originalPrice || product?.price || flashPrice)
-    : matchedVariant
-    ? (matchedVariant.originalPrice || matchedVariant.price)
-    : (product?.originalPrice || product?.price || 0);
+        if (flashPercentVal > 0 && vBase > 0) {
+          return Math.round((vBase * (1 - flashPercentVal / 100)) / 1000) * 1000;
+        }
+        if (matchedVariant.salePrice && matchedVariant.salePrice > 0) {
+          return matchedVariant.salePrice;
+        }
+      }
+
+      if (matchedVariant.salePrice && matchedVariant.salePrice > 0) {
+        return matchedVariant.salePrice;
+      }
+      if (product?.salePrice && product.salePrice > 0 && product.salePrice < (matchedVariant.price || product.price)) {
+        return product.salePrice;
+      }
+      return matchedVariant.price || product?.price || 0;
+    }
+
+    if (isFlash) {
+      if (product?.flashPrice && Number(product.flashPrice) > 0) return Number(product.flashPrice);
+      if (flashPercentVal > 0) {
+        const pBase = (product.salePrice && product.salePrice > 0 && product.salePrice < product.price)
+          ? product.salePrice
+          : (product.price || 0);
+        if (pBase > 0) return Math.round((pBase * (1 - flashPercentVal / 100)) / 1000) * 1000;
+      }
+    }
+
+    if (product?.salePrice && product.salePrice > 0) {
+      return product.salePrice;
+    }
+    return product?.price || 0;
+  }, [matchedVariant, isFlash, flashPercentVal, product]);
+
+  const originalPrice = useMemo(() => {
+    if (matchedVariant) {
+      const orig = matchedVariant.originalPrice || matchedVariant.price || product?.originalPrice || product?.price;
+      if (orig && orig > currentPrice) return orig;
+      return orig || currentPrice;
+    }
+    const pOrig = product?.originalPrice || product?.price;
+    if (pOrig && pOrig > currentPrice) return pOrig;
+    return pOrig || currentPrice;
+  }, [matchedVariant, product, currentPrice]);
 
   const hasDiscount = originalPrice > currentPrice;
 
-  const discountPercent = hasDiscount && originalPrice > 0
-    ? Math.round(((originalPrice - currentPrice) / originalPrice) * 100)
-    : null;
+  const discountPercent = useMemo(() => {
+    if (matchedVariant?.discountPercent) {
+      return matchedVariant.discountPercent;
+    }
+    if (isFlash && product?.discountPercent) {
+      return Number(product.discountPercent);
+    }
+    if (hasDiscount && originalPrice > 0) {
+      return Math.round(((originalPrice - currentPrice) / originalPrice) * 100);
+    }
+    return null;
+  }, [matchedVariant, isFlash, product?.discountPercent, hasDiscount, originalPrice, currentPrice]);
 
   const hasOptions = options.length > 0 || (variants && variants.length > 1);
 
   const isAllOptionsSelected = useMemo(() => {
     if (!hasOptions) return true;
     if (options.length > 0) {
-      return options.every((opt) => Boolean(selectedAttributes[opt.name]));
+      return options.every((opt) => {
+        const normOpt = normalizeAttrString(opt.name);
+        return Object.entries(selectedAttributes).some(
+          ([k, v]) => normalizeAttrString(k) === normOpt && Boolean(v?.trim())
+        );
+      });
     }
     if (variants.length > 1) {
       return Boolean(matchedVariant);
@@ -171,10 +235,17 @@ export default function ProductDetailModal({
 
   const priceRange = useMemo(() => {
     if (!variants || variants.length === 0) {
-      const p = product?.salePrice && product.salePrice > 0 ? product.salePrice : (product?.price || 0);
+      const p = currentPrice || (product?.salePrice && product.salePrice > 0 ? product.salePrice : (product?.price || 0));
       return { min: p, max: p, hasRange: false };
     }
     const prices = variants.map((v) => {
+      if (isFlash) {
+        if (typeof v.flashPrice === 'number' && v.flashPrice > 0) return v.flashPrice;
+        if (flashPercentVal > 0) {
+          const vBase = (v.salePrice && v.salePrice > 0) ? v.salePrice : (v.price || 0);
+          if (vBase > 0) return Math.round((vBase * (1 - flashPercentVal / 100)) / 1000) * 1000;
+        }
+      }
       if (typeof v.salePrice === 'number' && v.salePrice > 0) return v.salePrice;
       if (typeof v.price === 'number' && v.price > 0) return v.price;
       return (product?.salePrice && product.salePrice > 0) ? product.salePrice : (product?.price || 0);
@@ -182,11 +253,11 @@ export default function ProductDetailModal({
     const min = Math.min(...prices);
     const max = Math.max(...prices);
     return { min, max, hasRange: min < max && isFinite(min) && isFinite(max) };
-  }, [variants, product]);
+  }, [variants, product, isFlash, flashPercentVal, currentPrice]);
 
   const originalPriceRange = useMemo(() => {
     if (!variants || variants.length === 0) {
-      const orig = product?.originalPrice || (product?.salePrice && product.price > product.salePrice ? product.price : null);
+      const orig = product?.originalPrice || (product?.price && product.price > currentPrice ? product.price : null);
       return { min: orig, max: orig, hasRange: false };
     }
     const origPrices = variants.map((v) => {
@@ -197,7 +268,7 @@ export default function ProductDetailModal({
     const min = Math.min(...origPrices);
     const max = Math.max(...origPrices);
     return { min, max, hasRange: min < max && isFinite(min) && isFinite(max) };
-  }, [variants, product]);
+  }, [variants, product, currentPrice]);
 
   const shouldShowPriceRange = hasOptions && !isAllOptionsSelected && priceRange.hasRange;
 
@@ -284,25 +355,34 @@ export default function ProductDetailModal({
 
   const isOptionValueAvailable = (optionName: string, value: string): boolean => {
     if (variants.length === 0) return true;
-    const trialSelection = { ...selectedAttributes, [optionName]: value };
+    const normOpt = normalizeAttrString(optionName);
+    const normVal = normalizeAttrString(value);
+
     return variants.some((v) => {
-      const attrs = v.attributes instanceof Map ? Object.fromEntries(v.attributes) : v.attributes;
-      const isMatch = Object.keys(trialSelection).every((key) => attrs[key] === trialSelection[key]);
-      return isMatch && v.stock > 0;
+      const attrs = v.attributes instanceof Map ? Object.fromEntries(v.attributes) : (v.attributes || {});
+      const entry = Object.entries(attrs).find(([k]) => normalizeAttrString(k) === normOpt);
+      const isDirectMatch = entry && normalizeAttrString(entry[1]) === normVal;
+      const isColorMatch = normOpt.includes('mau') && normalizeAttrString(v.color) === normVal;
+      const isSizeMatch = (normOpt.includes('size') || normOpt.includes('kich')) && normalizeAttrString(v.size) === normVal;
+      return (isDirectMatch || isColorMatch || isSizeMatch) && (v.stock ?? 1) > 0;
     });
   };
 
   const handleSelectAttribute = (optionName: string, value: string) => {
-    if (!isOptionValueAvailable(optionName, value)) return;
     setSelectedAttributes((prev) => {
-      if (prev[optionName] === value) {
+      const normOpt = normalizeAttrString(optionName);
+      const existingKey = Object.keys(prev).find(
+        (k) => normalizeAttrString(k) === normOpt
+      ) || optionName;
+
+      if (prev[existingKey] && normalizeAttrString(prev[existingKey]) === normalizeAttrString(value)) {
         const next = { ...prev };
-        delete next[optionName];
+        delete next[existingKey];
         return next;
       }
       return {
         ...prev,
-        [optionName]: value,
+        [existingKey]: value,
       };
     });
   };
@@ -320,7 +400,11 @@ export default function ProductDetailModal({
   const validateSelection = (): boolean => {
     if (options.length > 0) {
       for (const opt of options) {
-        if (!selectedAttributes[opt.name]) {
+        const normOpt = normalizeAttrString(opt.name);
+        const hasVal = Object.entries(selectedAttributes).some(
+          ([k, v]) => normalizeAttrString(k) === normOpt && Boolean(v?.trim())
+        );
+        if (!hasVal) {
           toast.error(`Vui lòng chọn ${opt.name}!`);
           return false;
         }
@@ -348,30 +432,52 @@ export default function ProductDetailModal({
 
   const handleAddToCart = () => {
     if (!validateSelection()) return;
+    const variantToSend = matchedVariant
+      ? {
+          ...matchedVariant,
+          price: originalPrice,
+          salePrice: currentPrice,
+          flashPrice: isFlash ? currentPrice : undefined,
+        }
+      : undefined;
+
     const productToAdd = {
       ...product,
       price: originalPrice,
       salePrice: currentPrice,
-      flashPrice: product.flashPrice || currentPrice,
+      flashPrice: isFlash ? currentPrice : (product.flashPrice || currentPrice),
+      isFlashSale: isFlash,
+      discountPercent: discountPercent || flashDiscountPct || product.discountPercent,
     };
-    addToCart(productToAdd, quantity, matchedVariant || undefined);
+    addToCart(productToAdd, quantity, variantToSend);
     if (onSuccess) {
-      onSuccess('cart', matchedVariant, quantity);
+      onSuccess('cart', variantToSend, quantity);
     }
     onClose();
   };
 
   const handleBuyNow = () => {
     if (!validateSelection()) return;
+    const variantToSend = matchedVariant
+      ? {
+          ...matchedVariant,
+          price: originalPrice,
+          salePrice: currentPrice,
+          flashPrice: isFlash ? currentPrice : undefined,
+        }
+      : undefined;
+
     const productToBuy = {
       ...product,
       price: originalPrice,
       salePrice: currentPrice,
-      flashPrice: product.flashPrice || currentPrice,
+      flashPrice: isFlash ? currentPrice : (product.flashPrice || currentPrice),
+      isFlashSale: isFlash,
+      discountPercent: discountPercent || flashDiscountPct || product.discountPercent,
     };
-    buyNow(productToBuy, quantity, matchedVariant || undefined);
+    buyNow(productToBuy, quantity, variantToSend);
     if (onSuccess) {
-      onSuccess('buy', matchedVariant, quantity);
+      onSuccess('buy', variantToSend, quantity);
     }
     onClose();
     router.push('/checkout');
@@ -436,9 +542,14 @@ export default function ProductDetailModal({
 
           <div className={styles.headerInfo}>
             <div className={styles.priceRow}>
-              <span className={styles.currentPrice}>{displayPriceText}</span>
+              <span className={`${styles.currentPrice} ${isFlash ? styles.flashCurrentPrice : ''}`}>
+                {displayPriceText}
+              </span>
               {displayOriginalPriceText && (
                 <span className={styles.oldPrice}>{displayOriginalPriceText}</span>
+              )}
+              {isFlash && (
+                <span className={styles.flashBadgeInline}>⚡ FLASH SALE</span>
               )}
             </div>
 
@@ -469,38 +580,46 @@ export default function ProductDetailModal({
           <h3 className={styles.productTitle}>{product.name}</h3>
 
           {/* DYNAMIC MULTI-DIMENSIONAL OPTIONS */}
-          {options.map((opt) => (
-            <div key={opt.name} className={styles.variantBlock}>
-              <div className={styles.variantTitle}>
-                <span>{opt.name}:</span>
-                {selectedAttributes[opt.name] && (
-                  <span className={styles.activeVariantText}>
-                    {selectedAttributes[opt.name]}
-                  </span>
-                )}
-              </div>
-              <div className={styles.variantChips}>
-                {opt.values.map((val) => {
-                  const isSelected = selectedAttributes[opt.name] === val;
-                  const isAvail = isOptionValueAvailable(opt.name, val);
+          {options.map((opt) => {
+            const normOpt = normalizeAttrString(opt.name);
+            const currentSelectedVal = selectedAttributes[opt.name] ||
+              Object.entries(selectedAttributes).find(([k]) => normalizeAttrString(k) === normOpt)?.[1];
 
-                  return (
-                    <button
-                      key={val}
-                      type="button"
-                      disabled={!isAvail}
-                      className={`${styles.variantChip} ${isSelected ? styles.variantChipActive : ''} ${!isAvail ? styles.variantChipDisabled : ''}`}
-                      onClick={() => isAvail && handleSelectAttribute(opt.name, val)}
-                      title={!isAvail ? 'Tùy chọn này tạm hết hàng' : undefined}
-                    >
-                      {val}
-                      {isSelected && <FiCheck size={12} className={styles.checkIcon} />}
-                    </button>
-                  );
-                })}
+            return (
+              <div key={opt.name} className={styles.variantBlock}>
+                <div className={styles.variantTitle}>
+                  <span>{opt.name}:</span>
+                  {currentSelectedVal && (
+                    <span className={styles.activeVariantText}>
+                      {currentSelectedVal}
+                    </span>
+                  )}
+                </div>
+                <div className={styles.variantChips}>
+                  {opt.values.map((val) => {
+                    const isSelected = currentSelectedVal
+                      ? normalizeAttrString(currentSelectedVal) === normalizeAttrString(val)
+                      : false;
+                    const isAvail = isOptionValueAvailable(opt.name, val);
+
+                    return (
+                      <button
+                        key={val}
+                        type="button"
+                        disabled={!isAvail}
+                        className={`${styles.variantChip} ${isSelected ? styles.variantChipActive : ''} ${!isAvail ? styles.variantChipDisabled : ''}`}
+                        onClick={() => isAvail && handleSelectAttribute(opt.name, val)}
+                        title={!isAvail ? 'Tùy chọn này tạm hết hàng' : undefined}
+                      >
+                        {val}
+                        {isSelected && <FiCheck size={12} className={styles.checkIcon} />}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
 
           {/* Fallback generic variants */}
           {options.length === 0 && variants.length > 0 && (

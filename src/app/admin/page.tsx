@@ -25,7 +25,7 @@ import {
   Filler,
 } from 'chart.js';
 import { Line, Doughnut } from 'react-chartjs-2';
-import { formatPrice, formatDate } from '@/lib/utils';
+import { formatPrice, formatDate, getProductCoverImage } from '@/lib/utils';
 import { useTheme } from '@/contexts/ThemeContext';
 import Skeleton from '@/components/common/Skeleton';
 import LazyImage from '@/components/common/LazyImage';
@@ -407,7 +407,7 @@ export default function Dashboard() {
               reportData.topProducts.map((p: any, idx: number) => (
                 <div key={p._id} className={styles.productItem}>
                   <LazyImage
-                    src={p.images?.[0] || '/file.svg'}
+                    src={getProductCoverImage(p, '/file.svg')}
                     alt={p.name}
                     aspectRatio="1 / 1"
                     style={{ width: 44, height: 44, borderRadius: 6, objectFit: 'cover' }}

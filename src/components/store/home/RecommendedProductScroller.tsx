@@ -11,6 +11,7 @@ import {
   FiShoppingBag,
 } from 'react-icons/fi';
 import { RiFireFill } from 'react-icons/ri';
+import { getProductCoverImage } from '@/lib/utils';
 import { ProductItem } from './StoreProductCard';
 import styles from './RecommendedProductScroller.module.css';
 
@@ -184,10 +185,10 @@ const RecommendedProductScrollerComponent: React.FC<RecommendedProductScrollerPr
               ? calcDiscount(effectiveOriginalPrice, effectivePrice)
               : (product.discountPercent || null);
 
-          const displayImage =
-            product.images?.[0] ||
-            product.image ||
-            'https://images.unsplash.com/photo-1581655353564-df123a1eb820?w=500';
+          const displayImage = getProductCoverImage(
+            product,
+            'https://images.unsplash.com/photo-1581655353564-df123a1eb820?w=500'
+          );
 
           const rating = product.rating || (product as any).ratingAverage || 5;
           const soldCount = product.soldCount ?? product.sold ?? 0;

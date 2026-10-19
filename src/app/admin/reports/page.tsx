@@ -17,7 +17,7 @@ import {
   Filler,
 } from 'chart.js';
 import { Line, Bar, Doughnut } from 'react-chartjs-2';
-import { formatPrice } from '@/lib/utils';
+import { formatPrice, getProductCoverImage } from '@/lib/utils';
 import { useTheme } from '@/contexts/ThemeContext';
 import AdminLoading from '@/components/admin/AdminLoading';
 import { apiFetch } from '@/lib/api';
@@ -269,7 +269,7 @@ export default function ReportsPage() {
                     {idx + 1}
                   </span>
                   <img
-                    src={p.images?.[0] || '/file.svg'}
+                    src={getProductCoverImage(p, '/file.svg')}
                     alt={p.name}
                     style={{ width: 42, height: 42, borderRadius: 6, objectFit: 'cover' }}
                   />

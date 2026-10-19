@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { FiPlus, FiSearch, FiEdit2, FiTrash2, FiEye, FiRotateCcw } from 'react-icons/fi';
 import toast from 'react-hot-toast';
-import { formatPrice } from '@/lib/utils';
+import { formatPrice, getProductCoverImage } from '@/lib/utils';
 import LazyImage from '@/components/common/LazyImage';
 import Skeleton from '@/components/common/Skeleton';
 import ProductFormModal from '@/components/admin/ProductFormModal';
@@ -298,7 +298,7 @@ export default function ProductsPage() {
                     <tr key={p._id}>
                       <td style={{ width: 64 }}>
                         <LazyImage
-                          src={p.images?.[0] || '/file.svg'}
+                          src={getProductCoverImage(p, '/file.svg')}
                           alt={p.name}
                           aspectRatio="1 / 1"
                           style={{ width: 52, height: 52, borderRadius: 8, objectFit: 'cover' }}

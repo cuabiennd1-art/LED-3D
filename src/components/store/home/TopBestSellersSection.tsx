@@ -4,6 +4,7 @@ import React, { memo, useState, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { FiChevronRight, FiShoppingCart, FiStar } from 'react-icons/fi';
+import { getProductCoverImage } from '@/lib/utils';
 import { ProductItem, formatPrice, calcDiscount, formatSold, StarRating } from './StoreProductCard';
 import styles from './TopBestSellersSection.module.css';
 
@@ -103,10 +104,10 @@ const TopBestSellersSectionComponent: React.FC<TopBestSellersSectionProps> = ({
             const discount = calcDiscount(effectiveOriginalPrice, effectivePrice);
             const soldCount = product.soldCount ?? product.sold ?? 0;
             const rating = product.rating || 5;
-            const imageSrc =
-              product.images?.[0] ||
-              product.image ||
-              'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&auto=format&fit=crop&q=80';
+            const imageSrc = getProductCoverImage(
+              product,
+              'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&auto=format&fit=crop&q=80'
+            );
 
             const categoryName =
               typeof product.category === 'object'

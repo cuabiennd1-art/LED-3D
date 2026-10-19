@@ -21,7 +21,7 @@ import {
   FiCopy,
 } from 'react-icons/fi';
 import toast from 'react-hot-toast';
-import { formatPrice } from '@/lib/utils';
+import { formatPrice, getProductCoverImage } from '@/lib/utils';
 import { apiFetch } from '@/lib/api';
 import AdminLoading from '@/components/admin/AdminLoading';
 import ProductSelectModal from '@/components/admin/ProductSelectModal';
@@ -32,8 +32,10 @@ interface IFlashItem {
   productId: string;
   product?: any;
   originalPrice: number;
+  salePrice?: number;
   flashPrice: number;
   discountPercent: number;
+  flashPercent?: number;
   flashStock?: number;
   soldCount: number;
   isActive: boolean;
@@ -121,6 +123,10 @@ export default function AdminFlashSalePage() {
     enableViewerCount: true,
   });
 
+  // Bulk discount & Variant Preview states
+  const [bulkDiscountPercent, setBulkDiscountPercent] = useState<number>(20);
+  const [expandedProductVariantIds, setExpandedProductVariantIds] = useState<Record<string, boolean>>({});
+
   // Current Live Info for Header
   const [currentRunningSlotName, setCurrentRunningSlotName] = useState('');
   const [countdownText, setCountdownText] = useState('00:00:00');
@@ -153,17 +159,34 @@ export default function AdminFlashSalePage() {
                 const pid = it?.productId?._id || it?.productId;
                 return pid && typeof pid.toString === 'function' && pid.toString().trim().length > 0 && pid.toString() !== 'null' && pid.toString() !== '[object Object]';
               })
-              .map((it: any) => ({
-                _id: it._id,
-                productId: it.productId?._id || it.productId,
-                product: it.productId || {},
-                originalPrice: it.originalPrice || it.productId?.price || 0,
-                flashPrice: it.flashPrice || Math.round((it.originalPrice || 0) * 0.7),
-                discountPercent: it.discountPercent || 30,
-                flashStock: it.flashStock || 50,
-                soldCount: it.soldCount || 0,
-                isActive: it.isActive !== undefined ? it.isActive : true,
-              })),
+              .map((it: any) => {
+                const prod = it.productId || {};
+                const orig = Number(it.originalPrice) || Number(prod.price) || 0;
+                const normalSale = (Number(it.salePrice) && Number(it.salePrice) > 0 && Number(it.salePrice) < orig)
+                  ? Number(it.salePrice)
+                  : (Number(prod.salePrice) && Number(prod.salePrice) > 0 && Number(prod.salePrice) < orig ? Number(prod.salePrice) : orig);
+                const productSalePct = orig > normalSale ? Math.round(((orig - normalSale) / orig) * 100) : 0;
+                const flashPct = it.flashPercent !== undefined
+                  ? Number(it.flashPercent)
+                  : (normalSale > (it.flashPrice || 0) && (it.flashPrice || 0) > 0
+                    ? Math.max(0, Math.round(((normalSale - it.flashPrice) / normalSale) * 100))
+                    : 10);
+                const totalPct = it.discountPercent || Math.min(99, productSalePct + flashPct);
+
+                return {
+                  _id: it._id,
+                  productId: it.productId?._id || it.productId,
+                  product: it.productId || {},
+                  originalPrice: orig,
+                  salePrice: normalSale,
+                  flashPrice: it.flashPrice || Math.round((normalSale * (1 - flashPct / 100)) / 1000) * 1000,
+                  flashPercent: flashPct,
+                  discountPercent: totalPct,
+                  flashStock: it.flashStock || 50,
+                  soldCount: it.soldCount || 0,
+                  isActive: it.isActive !== undefined ? it.isActive : true,
+                };
+              }),
           }));
 
           setSlots(loadedSlots);
@@ -232,6 +255,54 @@ export default function AdminFlashSalePage() {
   // Active Slot helper
   const currentSlot = slots.find((s) => s.id === activeSlotId) || slots[0] || null;
 
+  // Toggle variant preview
+  const toggleVariantPreview = (itemId: string) => {
+    setExpandedProductVariantIds((prev) => ({
+      ...prev,
+      [itemId]: !prev[itemId],
+    }));
+  };
+
+  // Bulk Apply % to all items in current slot (giảm thêm pct% dựa trên giá sale của sản phẩm)
+  const handleApplyBulkDiscount = () => {
+    if (!currentSlot) return;
+    const pct = Math.max(1, Math.min(99, Number(bulkDiscountPercent) || 0));
+    setSlots((prev) =>
+      prev.map((s) => {
+        if (s.id !== currentSlot.id) return s;
+        const updated = (s.items || []).map((it) => {
+          const prod = it.product || {};
+          const orig = Number(it.originalPrice) || Number(prod.price) || 0;
+          const normalSale = (Number(it.salePrice) && Number(it.salePrice) > 0 && Number(it.salePrice) < orig)
+            ? Number(it.salePrice)
+            : (Number(prod.salePrice) && Number(prod.salePrice) > 0 && Number(prod.salePrice) < orig ? Number(prod.salePrice) : orig);
+          const productSalePct = orig > normalSale ? Math.round(((orig - normalSale) / orig) * 100) : 0;
+          const flash = Math.round((normalSale * (1 - pct / 100)) / 1000) * 1000;
+          const totalPct = Math.min(99, productSalePct + pct);
+
+          return {
+            ...it,
+            salePrice: normalSale,
+            flashPercent: pct,
+            discountPercent: totalPct,
+            flashPrice: flash,
+          };
+        });
+        return { ...s, items: updated };
+      })
+    );
+    toast.success(`Đã áp dụng giảm thêm ${pct}% Flash Sale (dựa trên giá sale) cho tất cả sản phẩm trong ${currentSlot.name}`);
+  };
+
+  // Make Current Slot Live Now (00:00 - 23:59)
+  const handleMakeSlotLiveNow = () => {
+    if (!currentSlot) return;
+    setSlots((prev) =>
+      prev.map((s) => (s.id === currentSlot.id ? { ...s, startTime: '00:00', endTime: '23:59', enabled: true } : s))
+    );
+    toast.success(`Đã đặt ${currentSlot.name} diễn ra cả ngày (00:00 - 23:59) để thử nghiệm ngay!`);
+  };
+
   // Add new Slot
   const handleAddNewSlot = () => {
     const newId = `slot_${Date.now()}`;
@@ -276,15 +347,23 @@ export default function AdminFlashSalePage() {
     if (!currentSlot) return;
 
     const newItems: IFlashItem[] = newProducts.map((p) => {
-      const origPrice = p.price || 0;
-      const discount = 35;
-      const fPrice = Math.round((origPrice * (100 - discount)) / 100000) * 1000;
+      const origPrice = Number(p.price) || 0;
+      const normalSale = (Number(p.salePrice) && Number(p.salePrice) > 0 && Number(p.salePrice) < origPrice)
+        ? Number(p.salePrice)
+        : origPrice;
+      const productSalePct = origPrice > normalSale ? Math.round(((origPrice - normalSale) / origPrice) * 100) : 0;
+      const flashDiscount = bulkDiscountPercent > 0 ? bulkDiscountPercent : 10;
+      const fPrice = Math.round((normalSale * (1 - flashDiscount / 100)) / 1000) * 1000;
+      const totalDiscount = Math.min(99, productSalePct + flashDiscount);
+
       return {
         productId: p._id,
         product: p,
         originalPrice: origPrice,
-        flashPrice: fPrice > 0 ? fPrice : Math.round(origPrice * 0.65),
-        discountPercent: discount,
+        salePrice: normalSale,
+        flashPrice: fPrice > 0 ? fPrice : normalSale,
+        flashPercent: flashDiscount,
+        discountPercent: totalDiscount,
         flashStock: Math.max(20, Math.min(100, p.stock || 50)),
         soldCount: Math.floor(Math.random() * 12) + 5,
         isActive: true,
@@ -321,18 +400,26 @@ export default function AdminFlashSalePage() {
         if (s.id !== currentSlot.id) return s;
         const updatedItems = [...s.items];
         const target = { ...updatedItems[itemIndex] };
+        const prod = target.product || {};
+        const orig = Number(target.originalPrice) || Number(prod.price) || 0;
+        const normalSale = (Number(target.salePrice) && Number(target.salePrice) > 0 && Number(target.salePrice) < orig)
+          ? Number(target.salePrice)
+          : (Number(prod.salePrice) && Number(prod.salePrice) > 0 && Number(prod.salePrice) < orig ? Number(prod.salePrice) : orig);
+        const productSalePct = orig > normalSale ? Math.round(((orig - normalSale) / orig) * 100) : 0;
 
-        if (field === 'discountPercent') {
-          const pct = Math.max(0, Math.min(99, Number(value) || 0));
-          target.discountPercent = pct;
-          target.flashPrice = Math.round((target.originalPrice * (100 - pct)) / 100000) * 1000;
+        if (field === 'discountPercent' || field === 'flashPercent') {
+          const flashPct = Math.max(0, Math.min(99, Number(value) || 0));
+          target.flashPercent = flashPct;
+          target.salePrice = normalSale;
+          target.flashPrice = Math.round((normalSale * (1 - flashPct / 100)) / 1000) * 1000;
+          target.discountPercent = Math.min(99, productSalePct + flashPct);
         } else if (field === 'flashPrice') {
           const price = Math.max(0, Number(value) || 0);
           target.flashPrice = price;
-          target.discountPercent =
-            target.originalPrice > 0
-              ? Math.max(0, Math.round(((target.originalPrice - price) / target.originalPrice) * 100))
-              : 0;
+          target.salePrice = normalSale;
+          const extraFlashPct = normalSale > price ? Math.max(0, Math.round(((normalSale - price) / normalSale) * 100)) : 0;
+          target.flashPercent = extraFlashPct;
+          target.discountPercent = Math.min(99, productSalePct + extraFlashPct);
         } else {
           (target as any)[field] = value;
         }
@@ -369,8 +456,10 @@ export default function AdminFlashSalePage() {
             .map((it: any) => ({
               productId: it.productId?._id || it.productId,
               originalPrice: Number(it.originalPrice) || 0,
+              salePrice: Number(it.salePrice) || 0,
               flashPrice: Number(it.flashPrice) || 0,
               discountPercent: Number(it.discountPercent) || 0,
+              flashPercent: Number(it.flashPercent) || 0,
               flashStock: Math.max(1, Number(it.flashStock) || 50),
               soldCount: Number(it.soldCount) || 0,
               isActive: it.isActive !== undefined ? it.isActive : true,
@@ -385,8 +474,10 @@ export default function AdminFlashSalePage() {
           .map((it: any) => ({
             productId: it.productId?._id || it.productId,
             originalPrice: Number(it.originalPrice) || 0,
+            salePrice: Number(it.salePrice) || 0,
             flashPrice: Number(it.flashPrice) || 0,
             discountPercent: Number(it.discountPercent) || 0,
+            flashPercent: Number(it.flashPercent) || 0,
             flashStock: Math.max(1, Number(it.flashStock) || 50),
             soldCount: Number(it.soldCount) || 0,
             isActive: it.isActive !== undefined ? it.isActive : true,
@@ -718,6 +809,81 @@ export default function AdminFlashSalePage() {
             </button>
           </div>
 
+          {/* Bulk Discount Toolbar */}
+          {slotItems.length > 0 && (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: 12,
+              padding: '12px 16px',
+              background: 'rgba(249, 115, 22, 0.08)',
+              border: '1px solid rgba(249, 115, 22, 0.25)',
+              borderRadius: 8,
+              marginBottom: 16,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '0.875rem', fontWeight: 600, color: '#f97316' }}>
+                  ⚡ Cài đặt nhanh % giảm giá cho toàn bộ {slotItems.length} sản phẩm:
+                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <input
+                    type="number"
+                    min={1}
+                    max={99}
+                    value={bulkDiscountPercent}
+                    onChange={(e) => setBulkDiscountPercent(Number(e.target.value) || 0)}
+                    style={{
+                      width: 70,
+                      padding: '6px 10px',
+                      borderRadius: 6,
+                      background: 'var(--admin-input-bg, #1f2430)',
+                      border: '1px solid #f97316',
+                      color: '#fff',
+                      fontWeight: 700,
+                      textAlign: 'center',
+                    }}
+                  />
+                  <span style={{ fontWeight: 700, color: '#f97316' }}>%</span>
+                  <button
+                    type="button"
+                    onClick={handleApplyBulkDiscount}
+                    style={{
+                      padding: '6px 14px',
+                      borderRadius: 6,
+                      background: '#f97316',
+                      color: '#fff',
+                      border: 'none',
+                      fontWeight: 600,
+                      fontSize: '0.85rem',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Áp dụng tất cả
+                  </button>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleMakeSlotLiveNow}
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: 6,
+                  background: 'rgba(59, 130, 246, 0.15)',
+                  border: '1px solid rgba(59, 130, 246, 0.4)',
+                  color: '#60a5fa',
+                  fontSize: '0.8125rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                🔥 Kích hoạt slot này ngay (Cả ngày 00:00 - 23:59)
+              </button>
+            </div>
+          )}
+
           {slotItems.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--admin-text-muted, #9ca3af)', background: 'var(--admin-bg, #111318)', borderRadius: 10, border: '1px solid var(--admin-border, #2d3343)' }}>
               Khung giờ này chưa có sản phẩm nào. Bấm <strong>"+ Thêm Sản Phẩm"</strong> để chọn hàng và cài đặt % Sale.
@@ -729,9 +895,9 @@ export default function AdminFlashSalePage() {
                   <tr>
                     <th style={{ width: 40, textAlign: 'center' }}>Bật</th>
                     <th style={{ width: 65, textAlign: 'center' }}>Ảnh</th>
-                    <th style={{ minWidth: 260 }}>Tên sản phẩm</th>
-                    <th style={{ width: 120 }}>Giá gốc</th>
-                    <th style={{ width: 110 }}>% Sale</th>
+                    <th style={{ minWidth: 260 }}>Tên sản phẩm & Phân loại</th>
+                    <th style={{ width: 140 }}>Giá gốc / Giá sale</th>
+                    <th style={{ width: 120 }}>% Flash Sale</th>
                     <th style={{ width: 140 }}>Giá Flash Sale</th>
                     <th style={{ width: 110 }}>Đã bán 🔥</th>
                     <th style={{ width: 60, textAlign: 'center' }}>Xóa</th>
@@ -741,88 +907,186 @@ export default function AdminFlashSalePage() {
                   {slotItems.map((item, idx) => {
                     const prod = typeof item.product === 'object' && item.product !== null ? item.product : {};
                     const prodName = prod.name || (item as any).name || prod.title || 'Sản phẩm Flash Sale';
-                    const prodImg = prod.images?.[0] || (item as any).image || (item as any).images?.[0] || '/file.svg';
+                    const prodImg = getProductCoverImage(prod, (item as any).image || '/file.svg');
                     const realStock = Array.isArray(prod.variants) && prod.variants.length > 0
                       ? prod.variants.reduce((sum: number, v: any) => sum + (Number(v.stock) || 0), 0)
                       : (Number(prod.stock) || 0);
 
+                    const itemId = String(item._id || item.productId || idx);
+                    const isExpanded = Boolean(expandedProductVariantIds[itemId]);
+                    const hasVariants = Array.isArray(prod.variants) && prod.variants.length > 0;
+
                     return (
-                      <tr key={idx} style={{ opacity: item.isActive ? 1 : 0.5 }}>
-                        <td style={{ textAlign: 'center' }}>
-                          <input
-                            type="checkbox"
-                            checked={item.isActive}
-                            onChange={(e) => handleItemChangeInSlot(idx, 'isActive', e.target.checked)}
-                            style={{ accentColor: '#f97316', width: 18, height: 18, cursor: 'pointer' }}
-                          />
-                        </td>
-                        <td style={{ textAlign: 'center' }}>
-                          <img
-                            src={prodImg}
-                            alt={prodName}
-                            className={styles.tableThumb}
-                            style={{ width: 44, height: 44, borderRadius: 6, objectFit: 'cover' }}
-                          />
-                        </td>
-                        <td>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                            <strong style={{ color: 'var(--admin-text, #f3f4f6)', fontSize: '0.875rem', lineHeight: 1.35, fontWeight: 700 }}>
-                              {prodName}
-                            </strong>
-                            <div style={{ fontSize: '0.75rem', color: 'var(--admin-text-muted, #9ca3af)' }}>
-                              Kho thực tế: <strong style={{ color: realStock < 10 ? '#ef4444' : '#10b981' }}>{realStock}</strong> cái
+                      <React.Fragment key={idx}>
+                        <tr style={{ opacity: item.isActive ? 1 : 0.5 }}>
+                          <td style={{ textAlign: 'center' }}>
+                            <input
+                              type="checkbox"
+                              checked={item.isActive}
+                              onChange={(e) => handleItemChangeInSlot(idx, 'isActive', e.target.checked)}
+                              style={{ accentColor: '#f97316', width: 18, height: 18, cursor: 'pointer' }}
+                            />
+                          </td>
+                          <td style={{ textAlign: 'center' }}>
+                            <img
+                              src={prodImg}
+                              alt={prodName}
+                              className={styles.tableThumb}
+                              style={{ width: 44, height: 44, borderRadius: 6, objectFit: 'cover' }}
+                            />
+                          </td>
+                          <td>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                              <strong style={{ color: 'var(--admin-text, #f3f4f6)', fontSize: '0.875rem', lineHeight: 1.35, fontWeight: 700 }}>
+                                {prodName}
+                              </strong>
+                              <div style={{ fontSize: '0.75rem', color: 'var(--admin-text-muted, #9ca3af)', display: 'flex', alignItems: 'center', gap: 12 }}>
+                                <span>Kho: <strong style={{ color: realStock < 10 ? '#ef4444' : '#10b981' }}>{realStock}</strong> cái</span>
+                                {hasVariants && (
+                                  <button
+                                    type="button"
+                                    onClick={() => toggleVariantPreview(itemId)}
+                                    style={{
+                                      background: 'none',
+                                      border: 'none',
+                                      color: '#60a5fa',
+                                      cursor: 'pointer',
+                                      padding: 0,
+                                      fontSize: '0.75rem',
+                                      textDecoration: 'underline',
+                                    }}
+                                  >
+                                    {isExpanded ? '▲ Thu gọn phân loại' : `▼ Xem ${prod.variants.length} phân loại (giảm ${item.flashPercent !== undefined ? item.flashPercent : (item.discountPercent || 0)}% từ giá sale)`}
+                                  </button>
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        </td>
-                        <td style={{ fontWeight: 600, color: 'var(--admin-text-muted, #9ca3af)' }}>
-                          {formatPrice(item.originalPrice)}
-                        </td>
-                        <td>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                          </td>
+                          <td style={{ fontWeight: 600, color: 'var(--admin-text-muted, #9ca3af)' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                              <span style={{ color: '#10b981', fontWeight: 700, fontSize: '0.875rem' }}>
+                                {formatPrice(item.salePrice || item.originalPrice)}
+                              </span>
+                              {item.originalPrice > (item.salePrice || 0) && (
+                                <span style={{ textDecoration: 'line-through', fontSize: '0.72rem', color: '#9ca3af' }}>
+                                  Gốc: {formatPrice(item.originalPrice)}
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                <input
+                                  type="number"
+                                  min={0}
+                                  max={99}
+                                  className={styles.tableInput}
+                                  value={item.flashPercent !== undefined ? item.flashPercent : (item.discountPercent || '')}
+                                  onChange={(e) => handleItemChangeInSlot(idx, 'flashPercent', e.target.value)}
+                                  style={{ width: 65, color: '#f97316', fontWeight: 700 }}
+                                />
+                                <span style={{ fontWeight: 700, color: '#f97316' }}>%</span>
+                              </div>
+                              <span style={{ fontSize: '0.7rem', color: '#f97316', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                                Tổng: -{item.discountPercent || 0}%
+                              </span>
+                            </div>
+                          </td>
+                          <td>
                             <input
                               type="number"
-                              min={1}
-                              max={99}
+                              step={1000}
+                              min={0}
                               className={styles.tableInput}
-                              value={item.discountPercent || ''}
-                              onChange={(e) => handleItemChangeInSlot(idx, 'discountPercent', e.target.value)}
-                              style={{ width: 65 }}
+                              value={item.flashPrice || ''}
+                              onChange={(e) => handleItemChangeInSlot(idx, 'flashPrice', e.target.value)}
+                              style={{ color: '#f97316', fontWeight: 800 }}
                             />
-                            <span style={{ fontWeight: 700, color: '#f97316' }}>%</span>
-                          </div>
-                        </td>
-                        <td>
-                          <input
-                            type="number"
-                            step={1000}
-                            min={0}
-                            className={styles.tableInput}
-                            value={item.flashPrice || ''}
-                            onChange={(e) => handleItemChangeInSlot(idx, 'flashPrice', e.target.value)}
-                            style={{ color: '#f97316', fontWeight: 800 }}
-                          />
-                        </td>
-                        <td>
-                          <input
-                            type="number"
-                            min={0}
-                            className={styles.tableInput}
-                            value={item.soldCount || ''}
-                            onChange={(e) => handleItemChangeInSlot(idx, 'soldCount', e.target.value)}
-                            style={{ width: 80, color: '#f97316' }}
-                          />
-                        </td>
-                        <td style={{ textAlign: 'center' }}>
-                          <button
-                            type="button"
-                            className={styles.btnDeleteRow}
-                            onClick={() => handleRemoveItemFromSlot(idx)}
-                            title="Xóa sản phẩm khỏi khung giờ này"
-                          >
-                            <FiTrash2 />
-                          </button>
-                        </td>
-                      </tr>
+                          </td>
+                          <td>
+                            <input
+                              type="number"
+                              min={0}
+                              className={styles.tableInput}
+                              value={item.soldCount || ''}
+                              onChange={(e) => handleItemChangeInSlot(idx, 'soldCount', e.target.value)}
+                              style={{ width: 80, color: '#f97316' }}
+                            />
+                          </td>
+                          <td style={{ textAlign: 'center' }}>
+                            <button
+                              type="button"
+                              className={styles.btnDeleteRow}
+                              onClick={() => handleRemoveItemFromSlot(idx)}
+                              title="Xóa sản phẩm khỏi khung giờ này"
+                            >
+                              <FiTrash2 />
+                            </button>
+                          </td>
+                        </tr>
+
+                        {/* Variant breakdown sub-row */}
+                        {hasVariants && isExpanded && (
+                          <tr style={{ background: 'rgba(0,0,0,0.25)' }}>
+                            <td colSpan={8} style={{ padding: '10px 16px' }}>
+                              <div style={{
+                                padding: '10px 14px',
+                                background: 'var(--admin-bg, #111318)',
+                                borderRadius: 8,
+                                border: '1px dashed var(--admin-border, #374151)',
+                              }}>
+                                <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#f97316', marginBottom: 6 }}>
+                                  ⚡ Bảng giá Flash Sale từng phân loại (giảm {item.flashPercent !== undefined ? item.flashPercent : (item.discountPercent || 0)}% từ giá sale, tổng giảm: -{item.discountPercent || 0}%):
+                                </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 8 }}>
+                                  {prod.variants.map((v: any, vIdx: number) => {
+                                    const vOrig = Number(v.price) || item.originalPrice;
+                                    const vSale = (Number(v.salePrice) && Number(v.salePrice) > 0 && Number(v.salePrice) < vOrig)
+                                      ? Number(v.salePrice)
+                                      : vOrig;
+                                    const fPct = item.flashPercent !== undefined ? item.flashPercent : (item.discountPercent || 0);
+                                    const vFlash = Math.round((vSale * (1 - fPct / 100)) / 1000) * 1000;
+                                    const vProdSalePct = vOrig > vSale ? Math.round(((vOrig - vSale) / vOrig) * 100) : 0;
+                                    const vTotalPct = Math.min(99, vProdSalePct + fPct);
+                                    const vName = v.title || v.name || v.color || v.size || `Phân loại #${vIdx + 1}`;
+                                    return (
+                                      <div key={vIdx} style={{
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center',
+                                        padding: '6px 10px',
+                                        background: 'rgba(255,255,255,0.03)',
+                                        borderRadius: 6,
+                                        fontSize: '0.78rem',
+                                        border: '1px solid var(--admin-border, #2d3343)',
+                                      }}>
+                                        <span style={{ color: '#e5e7eb', fontWeight: 500 }}>{vName}</span>
+                                        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                                          {vOrig > vSale && (
+                                            <span style={{ textDecoration: 'line-through', color: '#9ca3af', fontSize: '0.72rem' }}>
+                                              {formatPrice(vOrig)}
+                                            </span>
+                                          )}
+                                          <span style={{ color: '#10b981', fontSize: '0.72rem' }}>
+                                            {formatPrice(vSale)}
+                                          </span>
+                                          <span style={{ color: '#f97316', fontWeight: 800 }}>
+                                            {formatPrice(vFlash)}
+                                          </span>
+                                          <span style={{ background: '#f97316', color: '#fff', fontSize: '0.65rem', padding: '1px 5px', borderRadius: 3, fontWeight: 700 }}>
+                                            -{vTotalPct}%
+                                          </span>
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
                     );
                   })}
                 </tbody>

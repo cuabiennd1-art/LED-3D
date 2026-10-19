@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import connectToDatabase from '@/lib/mongodb';
 import Category from '@/models/Category';
 import Product from '@/models/Product';
-import { generateSlug } from '@/lib/utils';
+import { generateSlug, getProductCoverImage } from '@/lib/utils';
 
 export async function GET() {
   try {
@@ -37,12 +37,13 @@ export async function GET() {
         );
       });
 
-      // Lấy ảnh của 1 sản phẩm bất kỳ thuộc danh mục đó
+      // Lấy ảnh của 1 sản phẩm bất kỳ thuộc danh mục đó (bỏ qua video)
       let sampleProductImg = '';
       if (matchedProducts.length > 0) {
         for (const prod of matchedProducts) {
-          if (prod.images && prod.images.length > 0 && prod.images[0]) {
-            sampleProductImg = prod.images[0];
+          const cover = getProductCoverImage(prod, '');
+          if (cover) {
+            sampleProductImg = cover;
             break;
           }
         }

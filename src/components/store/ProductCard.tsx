@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { FiPlus } from 'react-icons/fi';
-import { formatPrice } from '@/lib/utils';
+import { formatPrice, getProductCoverImage } from '@/lib/utils';
 import { useCart } from '@/contexts/CartContext';
 import LazyImage from '@/components/common/LazyImage';
 import ProductDetailModal from '@/components/store/ProductDetailModal';
@@ -18,10 +18,15 @@ export default function ProductCard({ product, onQuickView }: ProductCardProps) 
   const { addToCart } = useCart();
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  const isFlash = Boolean(product.isFlashSale || (product.flashPrice && Number(product.flashPrice) > 0));
+  const effectivePrice = product.flashPrice || product.salePrice || product.price;
+  const effectiveOriginalPrice = product.price > effectivePrice ? product.price : (product.originalPrice || 0);
+
   const discountPercent =
-    product.salePrice && product.salePrice < product.price
-      ? Math.round(((product.price - product.salePrice) / product.price) * 100)
-      : null;
+    product.discountPercent ||
+    (effectiveOriginalPrice > effectivePrice
+      ? Math.round(((effectiveOriginalPrice - effectivePrice) / effectiveOriginalPrice) * 100)
+      : null);
 
   const handleAddClick = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -41,11 +46,18 @@ export default function ProductCard({ product, onQuickView }: ProductCardProps) 
       <div className={styles.card}>
         <Link href={`/product/${product.slug || product._id}`} className={styles.imageWrapper}>
           <LazyImage
-            src={(product.images && product.images[0]) || '/file.svg'}
+            src={getProductCoverImage(product, '/file.svg')}
             alt={product.name}
             className={styles.productImg}
           />
-          {discountPercent && <span className={styles.saleBadge}>-{discountPercent}%</span>}
+          {discountPercent && (
+            <span
+              className={styles.saleBadge}
+              style={isFlash ? { background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)', color: '#fff', fontWeight: 800 } : undefined}
+            >
+              {isFlash ? '⚡ ' : ''}-{discountPercent}%
+            </span>
+          )}
         </Link>
 
         <div className={styles.info}>

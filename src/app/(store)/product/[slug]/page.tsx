@@ -32,7 +32,7 @@ import {
 } from 'react-icons/fi';
 import ZaloIcon from '@/components/ui/ZaloIcon';
 import toast from 'react-hot-toast';
-import { formatPrice, sanitizeAndTransformRichDescription, isVideoUrl } from '@/lib/utils';
+import { formatPrice, sanitizeAndTransformRichDescription, isVideoUrl, getProductCoverImage } from '@/lib/utils';
 import { useCart } from '@/contexts/CartContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useCustomerAuth } from '@/contexts/CustomerAuthContext';
@@ -47,6 +47,7 @@ import {
   IProductOption,
   IVariantItem,
   findMatchingVariant,
+  normalizeAttrString,
 } from '@/lib/variant-helper';
 import styles from './page.module.css';
 
@@ -289,7 +290,7 @@ export default function ProductDetailPage() {
           slug: (params.slug as string) || product?.slug,
           productSlug: product?.slug || (params.slug as string),
           productName: product?.name,
-          productImage: product?.images?.[0] || product?.image,
+          productImage: getProductCoverImage(product, product?.image || ''),
           author: authorInput.trim(),
           rating: ratingInput,
           comment: commentInput.trim(),
@@ -535,18 +536,35 @@ export default function ProductDetailPage() {
   // Match current selected attributes to a variant
   const matchedVariant: IVariantItem | null = useMemo(() => {
     if (!variants.length) return null;
-    return findMatchingVariant(variants, selectedAttributes);
-  }, [variants, selectedAttributes]);
+    return findMatchingVariant(variants, selectedAttributes, options);
+  }, [variants, selectedAttributes, options]);
 
   // Pricing calculation
   const basePrice = product?.price || 0;
   const baseOriginalPrice = product?.originalPrice || (product?.comparePrice ?? null);
 
+  const isFlashLive = Boolean(
+    (product?.isFlashSale || flashSaleItem?.isLive) &&
+    (product?.flashPrice || flashSaleItem?.flashPrice || product?.discountPercent || flashSaleItem?.discountPercent)
+  );
+
+  const flashDiscountPercent = Number(flashSaleItem?.discountPercent || product?.discountPercent || 0);
+  const flashPercentVal = Number(flashSaleItem?.flashPercent || product?.flashPercent || 0);
+
   const currentPrice = useMemo(() => {
-    if (flashSaleItem?.flashPrice && flashSaleItem?.isLive) {
-      return flashSaleItem.flashPrice;
-    }
     if (matchedVariant) {
+      if (isFlashLive) {
+        if (matchedVariant.flashPrice && Number(matchedVariant.flashPrice) > 0) {
+          return Number(matchedVariant.flashPrice);
+        }
+        const vBase = (typeof matchedVariant.salePrice === 'number' && matchedVariant.salePrice > 0 && matchedVariant.salePrice < (matchedVariant.price || basePrice))
+          ? matchedVariant.salePrice
+          : (matchedVariant.price || basePrice);
+        const fPct = flashPercentVal > 0 ? flashPercentVal : flashDiscountPercent;
+        if (fPct > 0 && vBase > 0) {
+          return Math.round((vBase * (1 - fPct / 100)) / 1000) * 1000;
+        }
+      }
       if (typeof matchedVariant.salePrice === 'number' && matchedVariant.salePrice > 0) {
         return matchedVariant.salePrice;
       }
@@ -557,32 +575,48 @@ export default function ProductDetailPage() {
         return matchedVariant.price;
       }
     }
+
+    if (isFlashLive) {
+      if (flashSaleItem?.flashPrice && Number(flashSaleItem.flashPrice) > 0) {
+        return Number(flashSaleItem.flashPrice);
+      }
+      if (product?.flashPrice && Number(product.flashPrice) > 0) {
+        return Number(product.flashPrice);
+      }
+      const pBase = (typeof product?.salePrice === 'number' && product.salePrice > 0 && product.salePrice < basePrice)
+        ? product.salePrice
+        : basePrice;
+      const fPct = flashPercentVal > 0 ? flashPercentVal : flashDiscountPercent;
+      if (fPct > 0 && pBase > 0) {
+        return Math.round((pBase * (1 - fPct / 100)) / 1000) * 1000;
+      }
+    }
+
     if (typeof product?.salePrice === 'number' && product.salePrice > 0) {
       return product.salePrice;
     }
     return basePrice;
-  }, [flashSaleItem, matchedVariant, product, basePrice]);
+  }, [flashSaleItem, matchedVariant, product, basePrice, isFlashLive, flashDiscountPercent, flashPercentVal]);
 
   const originalPrice = useMemo(() => {
-    if (flashSaleItem?.originalPrice && flashSaleItem?.isLive) {
-      return flashSaleItem.originalPrice;
-    }
-    if (flashSaleItem?.flashPrice && flashSaleItem?.isLive && (product?.originalPrice || product?.price)) {
-      return product?.originalPrice || product?.price;
-    }
     if (matchedVariant) {
-      if (
-        typeof matchedVariant.salePrice === 'number' &&
-        matchedVariant.salePrice > 0 &&
-        matchedVariant.price > matchedVariant.salePrice
-      ) {
-        return matchedVariant.price;
-      }
       if (matchedVariant.originalPrice && matchedVariant.originalPrice > currentPrice) {
         return matchedVariant.originalPrice;
       }
       if (matchedVariant.price && matchedVariant.price > currentPrice) {
         return matchedVariant.price;
+      }
+      return null;
+    }
+    if (isFlashLive) {
+      if (flashSaleItem?.originalPrice && flashSaleItem.originalPrice > currentPrice) {
+        return flashSaleItem.originalPrice;
+      }
+      if (product?.originalPrice && product.originalPrice > currentPrice) {
+        return product.originalPrice;
+      }
+      if (product?.price && product.price > currentPrice) {
+        return product.price;
       }
     }
     if (baseOriginalPrice && baseOriginalPrice > currentPrice) {
@@ -592,12 +626,12 @@ export default function ProductDetailPage() {
       return product.price;
     }
     return null;
-  }, [flashSaleItem, matchedVariant, baseOriginalPrice, currentPrice, product]);
+  }, [matchedVariant, isFlashLive, flashSaleItem, product, currentPrice, baseOriginalPrice]);
 
   const hasDiscount = originalPrice !== null && originalPrice > currentPrice;
   const discountPercent = hasDiscount
     ? Math.round(((originalPrice - currentPrice) / originalPrice) * 100)
-    : null;
+    : (isFlashLive && flashDiscountPercent > 0 ? flashDiscountPercent : null);
 
   // Check if product has multi-variants/options
   const hasOptions = options.length > 0 || (variants && variants.length > 1);
@@ -617,11 +651,17 @@ export default function ProductDetailPage() {
   // Price range calculation when variant is not yet selected (Giá lớn nhất và nhỏ nhất)
   const priceRange = useMemo(() => {
     if (!variants || variants.length === 0) {
-      const p = product?.salePrice && product.salePrice > 0 ? product.salePrice : (product?.price || 0);
+      const p = currentPrice || (product?.salePrice && product.salePrice > 0 ? product.salePrice : (product?.price || 0));
       return { min: p, max: p, hasRange: false };
     }
 
     const prices = variants.map((v) => {
+      if (isFlashLive) {
+        if (typeof v.flashPrice === 'number' && v.flashPrice > 0) return v.flashPrice;
+        if (flashDiscountPercent > 0 && v.price > 0) {
+          return Math.round((v.price * (1 - flashDiscountPercent / 100)) / 1000) * 1000;
+        }
+      }
       if (typeof v.salePrice === 'number' && v.salePrice > 0) return v.salePrice;
       if (typeof v.price === 'number' && v.price > 0) return v.price;
       return (product?.salePrice && product.salePrice > 0) ? product.salePrice : (product?.price || 0);
@@ -634,7 +674,7 @@ export default function ProductDetailPage() {
       max,
       hasRange: min < max && isFinite(min) && isFinite(max),
     };
-  }, [variants, product]);
+  }, [variants, product, isFlashLive, flashDiscountPercent, currentPrice]);
 
   const originalPriceRange = useMemo(() => {
     if (!variants || variants.length === 0) {
@@ -658,6 +698,9 @@ export default function ProductDetailPage() {
   }, [variants, product]);
 
   const maxDiscountPercent = useMemo(() => {
+    if (isFlashLive && flashDiscountPercent > 0) {
+      return flashDiscountPercent;
+    }
     if (!variants || variants.length === 0) return discountPercent;
     const discounts = variants.map((v) => {
       const eff = (typeof v.salePrice === 'number' && v.salePrice > 0) ? v.salePrice : (v.price || 0);
@@ -671,7 +714,7 @@ export default function ProductDetailPage() {
     });
     const max = Math.max(...discounts, 0);
     return max > 0 ? max : null;
-  }, [variants, discountPercent]);
+  }, [variants, discountPercent, isFlashLive, flashDiscountPercent]);
 
   // Khi chưa chọn phân loại: hiển thị khoảng giá min - max
   // Khi đã chọn phân loại: hiển thị đúng giá của phân loại đó
@@ -766,28 +809,33 @@ export default function ProductDetailPage() {
   // Check if an option value is available given current selections
   const isOptionValueAvailable = (optName: string, val: string) => {
     if (!variants.length) return true;
-    const testAttrs = { ...selectedAttributes, [optName]: val };
-    const matching = variants.find((v: any) => {
+    const normOpt = normalizeAttrString(optName);
+    const normVal = normalizeAttrString(val);
+    return variants.some((v: any) => {
       const rawAttrs = v.attributes instanceof Map ? Object.fromEntries(v.attributes) : (v.attributes || {});
-      const isMatch = Object.entries(testAttrs).every(([k, vVal]) => {
-        if (!vVal) return true;
-        return rawAttrs[k] === vVal || (k === 'Màu sắc' && v.color === vVal) || (k === 'Kích cỡ' && v.size === vVal);
-      });
-      return isMatch && (v.stock ?? 1) > 0;
+      const entry = Object.entries(rawAttrs).find(([k]) => normalizeAttrString(k) === normOpt);
+      const isDirectMatch = entry && normalizeAttrString(entry[1]) === normVal;
+      const isColorMatch = normOpt.includes('mau') && normalizeAttrString(v.color) === normVal;
+      const isSizeMatch = (normOpt.includes('size') || normOpt.includes('kich')) && normalizeAttrString(v.size) === normVal;
+      return (isDirectMatch || isColorMatch || isSizeMatch) && (v.stock ?? 1) > 0;
     });
-    return !!matching;
   };
 
   const handleSelectAttribute = (optName: string, val: string) => {
     setSelectedAttributes((prev) => {
-      if (prev[optName] === val) {
+      const normOpt = normalizeAttrString(optName);
+      const existingKey = Object.keys(prev).find(
+        (k) => normalizeAttrString(k) === normOpt
+      ) || optName;
+
+      if (prev[existingKey] && normalizeAttrString(prev[existingKey]) === normalizeAttrString(val)) {
         const next = { ...prev };
-        delete next[optName];
+        delete next[existingKey];
         return next;
       }
       return {
         ...prev,
-        [optName]: val,
+        [existingKey]: val,
       };
     });
   };
@@ -821,11 +869,27 @@ export default function ProductDetailPage() {
       return;
     }
 
-    const prodWithFlash = (flashSaleItem?.flashPrice && flashSaleItem?.isLive)
-      ? { ...product, flashPrice: flashSaleItem.flashPrice, isFlashSale: true }
+    const variantToSend = matchedVariant
+      ? {
+          ...matchedVariant,
+          price: originalPrice || matchedVariant.price,
+          salePrice: currentPrice,
+          flashPrice: isFlashLive ? currentPrice : undefined,
+        }
+      : undefined;
+
+    const prodWithFlash = isFlashLive
+      ? {
+          ...product,
+          price: originalPrice || product.price,
+          salePrice: currentPrice,
+          flashPrice: currentPrice,
+          isFlashSale: true,
+          discountPercent: flashDiscountPercent || product.discountPercent,
+        }
       : product;
 
-    addToCart(prodWithFlash, quantity, matchedVariant || undefined);
+    addToCart(prodWithFlash, quantity, variantToSend);
     toast.success(`Đã thêm ${quantity} sản phẩm vào giỏ hàng!`);
   };
 
@@ -848,11 +912,27 @@ export default function ProductDetailPage() {
       return;
     }
 
-    const prodWithFlash = (flashSaleItem?.flashPrice && flashSaleItem?.isLive)
-      ? { ...product, flashPrice: flashSaleItem.flashPrice, isFlashSale: true }
+    const variantToSend = matchedVariant
+      ? {
+          ...matchedVariant,
+          price: originalPrice || matchedVariant.price,
+          salePrice: currentPrice,
+          flashPrice: isFlashLive ? currentPrice : undefined,
+        }
+      : undefined;
+
+    const prodWithFlash = isFlashLive
+      ? {
+          ...product,
+          price: originalPrice || product.price,
+          salePrice: currentPrice,
+          flashPrice: currentPrice,
+          isFlashSale: true,
+          discountPercent: flashDiscountPercent || product.discountPercent,
+        }
       : product;
 
-    buyNow(prodWithFlash, quantity, matchedVariant || undefined);
+    buyNow(prodWithFlash, quantity, variantToSend);
     router.push('/checkout');
   };
 
@@ -1307,7 +1387,7 @@ export default function ProductDetailPage() {
           </div>
 
           {/* Mobile Flash Sale Bar */}
-          {flashSaleItem && flashSaleItem.isLive && (
+          {isFlashLive && (
             <div className={styles.mobileFlashBar}>
               <div className={styles.flashBarLeft}>
                 <FiZap size={18} style={{ fill: '#fff' }} />
@@ -1332,7 +1412,7 @@ export default function ProductDetailPage() {
             <div className={styles.mobilePriceRow}>
               <span
                 className={styles.mobileCurrentPrice}
-                style={{ color: (flashSaleItem && flashSaleItem.isLive) ? '#f97316' : undefined }}
+                style={{ color: isFlashLive ? '#ee4d2d' : undefined, fontWeight: isFlashLive ? 800 : undefined }}
               >
                 {displayCurrentPriceText}
               </span>
@@ -1343,8 +1423,8 @@ export default function ProductDetailPage() {
                     <span
                       className={styles.mobileDiscountBadge}
                       style={{
-                        background: (flashSaleItem && flashSaleItem.isLive) ? '#ea580c' : undefined,
-                        color: (flashSaleItem && flashSaleItem.isLive) ? '#ffffff' : undefined,
+                        background: isFlashLive ? 'linear-gradient(90deg, #ff3b30, #ee4d2d)' : undefined,
+                        color: isFlashLive ? '#ffffff' : undefined,
                       }}
                     >
                       {displayDiscountBadge}
@@ -1412,7 +1492,9 @@ export default function ProductDetailPage() {
                   </div>
                   <div className={styles.variantChips}>
                     {opt.values.map((val) => {
-                      const isSelected = selectedAttributes[opt.name] === val;
+                      const isSelected = selectedAttributes[opt.name]
+                        ? normalizeAttrString(selectedAttributes[opt.name]) === normalizeAttrString(val)
+                        : false;
                       const isAvailable = isOptionValueAvailable(opt.name, val);
 
                       return (
@@ -1982,7 +2064,7 @@ export default function ProductDetailPage() {
                 </span>
               </div>
 
-              {flashSaleItem && flashSaleItem.isLive && (
+              {isFlashLive && (
                 <div className={styles.shopeeFlashBar}>
                   <div className={styles.flashBarLeft}>
                     <FiZap size={16} style={{ fill: '#fff' }} />
@@ -2051,7 +2133,9 @@ export default function ProductDetailPage() {
                     </div>
                     <div className={styles.variantChips}>
                       {opt.values.map((val) => {
-                        const isSelected = selectedAttributes[opt.name] === val;
+                        const isSelected = selectedAttributes[opt.name]
+                          ? normalizeAttrString(selectedAttributes[opt.name]) === normalizeAttrString(val)
+                          : false;
                         const isAvailable = isOptionValueAvailable(opt.name, val);
 
                         return (
@@ -2791,8 +2875,15 @@ export default function ProductDetailPage() {
       {isVariantModalOpen && product && (
         <ProductDetailModal
           product={
-            flashSaleItem?.flashPrice && flashSaleItem?.isLive
-              ? { ...product, flashPrice: flashSaleItem.flashPrice, isFlashSale: true }
+            isFlashLive
+              ? {
+                  ...product,
+                  flashPrice: currentPrice,
+                  isFlashSale: true,
+                  discountPercent: flashDiscountPercent || product.discountPercent,
+                  flashPercent: flashPercentVal,
+                  variants: product.variants,
+                }
               : product
           }
           initialAttributes={selectedAttributes}

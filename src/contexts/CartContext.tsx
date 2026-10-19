@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
+import { getProductCoverImage } from '@/lib/utils';
 
 export interface CartItem {
   _id?: string;
@@ -147,24 +148,33 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         ? `${variant.color} - ${variant.size}`
         : variant?.color || variant?.size || '');
 
-    const flashPrice =
+    const variantFlashPrice =
+      variant?.flashPrice !== undefined && variant?.flashPrice !== null && Number(variant.flashPrice) > 0
+        ? Number(variant.flashPrice)
+        : (variant?.salePrice !== undefined && variant?.salePrice !== null && Number(variant.salePrice) > 0
+          ? Number(variant.salePrice)
+          : undefined);
+
+    const baseFlashPrice =
       product?.flashPrice !== undefined && product?.flashPrice !== null && Number(product.flashPrice) > 0
         ? Number(product.flashPrice)
         : undefined;
 
     const effectivePrice =
-      flashPrice !== undefined
-        ? flashPrice
-        : variant?.salePrice !== undefined && variant.salePrice !== null && Number(variant.salePrice) > 0
-        ? Number(variant.salePrice)
+      variantFlashPrice !== undefined
+        ? variantFlashPrice
         : (variant?.price !== undefined && variant.price !== null && Number(variant.price) > 0
           ? Number(variant.price)
-          : (product.salePrice && Number(product.salePrice) > 0 ? Number(product.salePrice) : (Number(product.price) || 0)));
+          : (baseFlashPrice !== undefined
+            ? baseFlashPrice
+            : (product.salePrice && Number(product.salePrice) > 0 ? Number(product.salePrice) : (Number(product.price) || 0))));
 
     const originalPrice =
-      variant?.price !== undefined && variant.price !== null && Number(variant.price) > 0
-        ? Number(variant.price)
-        : (Number(product.originalPrice) || Number(product.price) || effectivePrice);
+      variant?.originalPrice !== undefined && variant?.originalPrice !== null && Number(variant.originalPrice) > 0
+        ? Number(variant.originalPrice)
+        : (variant?.price !== undefined && variant.price !== null && Number(variant.price) > 0
+          ? Number(variant.price)
+          : (Number(product.originalPrice) || Number(product.price) || effectivePrice));
 
     const availableStock =
       variant?.stock !== undefined && variant?.stock !== null
@@ -214,7 +224,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           originalPrice,
           quantity: initialQty,
           stock: availableStock,
-          image: variant?.image || (product.images && product.images[0]) || product.image || '/file.svg',
+          image: variant?.image || getProductCoverImage(product, '/file.svg'),
           variant: variant ? { ...variant, name: variantName, price: originalPrice, salePrice: effectivePrice, stock: availableStock } : undefined,
           selected: true,
         };
@@ -243,24 +253,33 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         ? `${variant.color} - ${variant.size}`
         : variant?.color || variant?.size || '');
 
-    const flashPrice =
+    const variantFlashPrice =
+      variant?.flashPrice !== undefined && variant?.flashPrice !== null && Number(variant.flashPrice) > 0
+        ? Number(variant.flashPrice)
+        : (variant?.salePrice !== undefined && variant?.salePrice !== null && Number(variant.salePrice) > 0
+          ? Number(variant.salePrice)
+          : undefined);
+
+    const baseFlashPrice =
       product?.flashPrice !== undefined && product?.flashPrice !== null && Number(product.flashPrice) > 0
         ? Number(product.flashPrice)
         : undefined;
 
     const effectivePrice =
-      flashPrice !== undefined
-        ? flashPrice
-        : variant?.salePrice !== undefined && variant.salePrice !== null && Number(variant.salePrice) > 0
-        ? Number(variant.salePrice)
+      variantFlashPrice !== undefined
+        ? variantFlashPrice
         : (variant?.price !== undefined && variant.price !== null && Number(variant.price) > 0
           ? Number(variant.price)
-          : (product.salePrice && Number(product.salePrice) > 0 ? Number(product.salePrice) : (Number(product.price) || 0)));
+          : (baseFlashPrice !== undefined
+            ? baseFlashPrice
+            : (product.salePrice && Number(product.salePrice) > 0 ? Number(product.salePrice) : (Number(product.price) || 0))));
 
     const originalPrice =
-      variant?.price !== undefined && variant.price !== null && Number(variant.price) > 0
-        ? Number(variant.price)
-        : (Number(product.originalPrice) || Number(product.price) || effectivePrice);
+      variant?.originalPrice !== undefined && variant?.originalPrice !== null && Number(variant.originalPrice) > 0
+        ? Number(variant.originalPrice)
+        : (variant?.price !== undefined && variant.price !== null && Number(variant.price) > 0
+          ? Number(variant.price)
+          : (Number(product.originalPrice) || Number(product.price) || effectivePrice));
 
     const availableStock =
       variant?.stock !== undefined && variant?.stock !== null
@@ -283,7 +302,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       originalPrice,
       quantity: finalQty,
       stock: availableStock,
-      image: variant?.image || (product.images && product.images[0]) || product.image || '/file.svg',
+      image: variant?.image || getProductCoverImage(product, '/file.svg'),
       variant: variant ? { ...variant, name: variantName, price: originalPrice, salePrice: effectivePrice, stock: availableStock } : undefined,
       selected: true,
     };

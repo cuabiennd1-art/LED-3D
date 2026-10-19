@@ -13,6 +13,7 @@ import BannerNotice from '@/components/common/BannerNotice';
 import VoucherCollectionBar from '@/components/store/VoucherCollectionBar';
 import { apiFetch } from '@/lib/api';
 import { clientCache } from '@/lib/clientCache';
+import { getProductCoverImage } from '@/lib/utils';
 import StoreHeader from '@/components/store/home/StoreHeader';
 import HeroBannerCarousel from '@/components/store/home/HeroBannerCarousel';
 import FlashSaleSection from '@/components/store/home/FlashSaleSection';
@@ -300,6 +301,7 @@ function HomePageContent() {
         else if (filterIndex === 4) sort = isAsc ? 'price-asc' : 'price-desc';
 
         let url = `/api/products?limit=120&status=active&sort=${sort}`;
+        if (filterIndex === 1) url += '&flashSale=true';
         if (query.trim()) url += `&search=${encodeURIComponent(query.trim())}`;
         if (categorySlug && categorySlug !== 'all') url += `&category=${encodeURIComponent(categorySlug)}`;
 
@@ -308,11 +310,11 @@ function HomePageContent() {
         if (data.success && Array.isArray(data.data)) {
           let list = data.data;
           if (filterIndex === 1) {
-            // Flash Sale filter
+            // Flash Sale filter: CHỈ hiển thị các sản phẩm thực sự đang chạy Flash Sale
             list = list.filter(
               (p: any) =>
-                (p.flashPrice && p.flashPrice > 0) ||
-                (p.salePrice && p.salePrice > 0 && p.salePrice < p.price)
+                Boolean(p.isFlashSale) ||
+                (Boolean(p.flashPrice) && Number(p.flashPrice) > 0)
             );
           } else if (filterIndex === 2) {
             // Bán Chạy: sắp xếp theo số lượng bán nhiều nhất
@@ -498,10 +500,12 @@ function HomePageContent() {
       const catId = (typeof p.category === 'object' ? p.category?._id : p.category || '').toString().trim();
       const catName = (typeof p.category === 'object' ? p.category?.name : '').toLowerCase().trim();
 
-      const img = p.images[0];
-      if (catSlug && !map[catSlug]) map[catSlug] = img;
-      if (catId && !map[catId]) map[catId] = img;
-      if (catName && !map[catName]) map[catName] = img;
+      const img = getProductCoverImage(p, '');
+      if (img) {
+        if (catSlug && !map[catSlug]) map[catSlug] = img;
+        if (catId && !map[catId]) map[catId] = img;
+        if (catName && !map[catName]) map[catName] = img;
+      }
     });
     return map;
   }, [recommendedSaleProducts, products]);

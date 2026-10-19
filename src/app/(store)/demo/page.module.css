@@ -1368,6 +1368,171 @@
   margin-top: 1px;
 }
 
+/* Flash Sale Card Badges & Accents */
+.shopeeCardFlash {
+  border: 1.5px solid rgba(238, 77, 45, 0.45) !important;
+  box-shadow: 0 2px 10px rgba(238, 77, 45, 0.12) !important;
+  position: relative;
+}
+
+.shopeeCardFlash:hover {
+  border-color: #ee4d2d !important;
+  box-shadow: 0 4px 16px rgba(238, 77, 45, 0.22) !important;
+}
+
+.listCardFlash {
+  border: 1.5px solid rgba(238, 77, 45, 0.45) !important;
+  box-shadow: 0 2px 10px rgba(238, 77, 45, 0.12) !important;
+}
+
+.cardFlashBadge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  background: rgba(255, 212, 36, 0.96);
+  color: #ee4d2d;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 3px 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.1;
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 85%, 0 100%);
+  width: 38px;
+  height: 40px;
+  z-index: 3;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.12);
+}
+
+.cardFlashPercent {
+  font-size: 11.5px;
+  font-weight: 900;
+  color: #ee4d2d;
+  letter-spacing: -0.3px;
+  line-height: 1.1;
+}
+
+.cardFlashLabel {
+  font-size: 7px;
+  font-weight: 900;
+  color: #ffffff;
+  background: linear-gradient(90deg, #ee4d2d 0%, #ff3b30 100%);
+  padding: 1.5px 3px;
+  border-radius: 1.5px;
+  margin-top: 1.5px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  letter-spacing: -0.2px;
+}
+
+.cardFlashPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: linear-gradient(90deg, #ff1a1a 0%, #ee4d2d 50%, #ff6b00 100%);
+  color: #ffffff;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  margin-bottom: 6px;
+  box-shadow: 0 2px 8px rgba(238, 77, 45, 0.3);
+  position: relative;
+  overflow: hidden;
+  line-height: 1.2;
+}
+
+.cardFlashPill::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+  animation: flashShine 2.5s infinite;
+}
+
+@keyframes flashShine {
+  0% { left: -100%; }
+  25% { left: 150%; }
+  100% { left: 150%; }
+}
+
+.cardFlashPillBolt {
+  font-size: 11px;
+  color: #ffe600;
+  filter: drop-shadow(0 0 3px rgba(255, 230, 0, 0.9));
+  animation: boltPulse 1.2s infinite ease-in-out;
+  display: inline-block;
+}
+
+@keyframes boltPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.3); }
+}
+
+.cardFlashPillText {
+  font-weight: 900;
+  font-size: 9.5px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.cardFlashPillDiscount {
+  background: rgba(0, 0, 0, 0.22);
+  padding: 1px 4px;
+  border-radius: 2px;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: -0.2px;
+}
+
+.cardFlashPrice {
+  color: #ee4d2d !important;
+  font-weight: 900 !important;
+  font-size: 15px !important;
+  letter-spacing: -0.3px;
+}
+
+.cardFlashFireBar {
+  width: 100%;
+  height: 15px;
+  background: rgba(238, 77, 45, 0.12);
+  border-radius: 9999px;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 4px;
+  margin-bottom: 2px;
+}
+
+.cardFlashFireFill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  background: linear-gradient(90deg, #ff7a45 0%, #ee4d2d 100%);
+  border-radius: 9999px;
+  transition: width 0.4s ease;
+}
+
+.cardFlashFireText {
+  position: relative;
+  z-index: 1;
+  font-size: 9px;
+  font-weight: 900;
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+  line-height: 1;
+}
+
 .freeshipBanner {
   position: absolute;
   bottom: 0;

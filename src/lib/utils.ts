@@ -196,3 +196,48 @@ export function getYouTubeEmbedUrl(url: string): string | null {
   const ytMatch = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([\w-]{11})/);
   return ytMatch ? `https://www.youtube.com/embed/${ytMatch[1]}` : null;
 }
+
+/**
+ * Lấy ảnh hiển thị đại diện (thumbnail / cover) của sản phẩm.
+ * Tự động bỏ qua bất kỳ video nào (mp4, webm, youtube, v.v.), luôn lấy ảnh tĩnh đầu tiên
+ * (ví dụ nếu video đặt ở vị trí #1 thì tự động lấy ảnh thứ #2 để hiển thị).
+ */
+export function getProductCoverImage(product?: any, fallback = '/file.svg'): string {
+  if (!product) return fallback;
+
+  // Nếu tham số truyền vào là mảng các đường dẫn ảnh
+  if (Array.isArray(product)) {
+    const staticImg = product.find(
+      (img: any) => typeof img === 'string' && img.trim().length > 0 && !isVideoUrl(img)
+    );
+    return staticImg || fallback;
+  }
+
+  // 1. Kiểm tra mảng images của sản phẩm
+  if (Array.isArray(product.images) && product.images.length > 0) {
+    const staticImg = product.images.find(
+      (img: any) => typeof img === 'string' && img.trim().length > 0 && !isVideoUrl(img)
+    );
+    if (staticImg) return staticImg;
+  }
+
+  // 2. Kiểm tra thuộc tính image đơn
+  if (product.image && typeof product.image === 'string' && !isVideoUrl(product.image)) {
+    return product.image;
+  }
+
+  // 3. Kiểm tra ảnh trong variants nếu có
+  if (Array.isArray(product.variants)) {
+    const variantImg = product.variants.find(
+      (v: any) => v.image && typeof v.image === 'string' && !isVideoUrl(v.image)
+    )?.image;
+    if (variantImg) return variantImg;
+  }
+
+  // 4. Nếu product là chuỗi string URL trực tiếp
+  if (typeof product === 'string' && product.trim().length > 0 && !isVideoUrl(product)) {
+    return product;
+  }
+
+  return fallback;
+}

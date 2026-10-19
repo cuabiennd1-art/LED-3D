@@ -4,6 +4,7 @@ import Order from '@/models/Order';
 import Setting from '@/models/Setting';
 import ChatMessage from '@/models/ChatMessage';
 import Conversation from '@/models/Conversation';
+import { getProductCoverImage } from '@/lib/utils';
 
 export interface IBotReplyResult {
   shouldReply: boolean;
@@ -444,7 +445,7 @@ Quy tắc tư vấn bán hàng đỉnh cao (Elite Sales Consultant):
           name: p.name,
           price: p.price,
           salePrice: p.salePrice,
-          image: p.images?.[0] || '',
+          image: getProductCoverImage(p, ''),
           slug: p.slug,
         }));
 

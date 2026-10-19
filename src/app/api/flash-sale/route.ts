@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import connectToDatabase from '@/lib/mongodb';
 import FlashSale from '@/models/FlashSale';
+import { getProductCoverImage } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,11 +29,11 @@ export async function GET() {
     const flashSale = await FlashSale.findOne()
       .populate({
         path: 'items.productId',
-        select: 'name slug price salePrice images stock soldCount category status',
+        select: 'name slug price salePrice images stock soldCount category status variants options',
       })
       .populate({
         path: 'slots.items.productId',
-        select: 'name slug price salePrice images stock soldCount category status',
+        select: 'name slug price salePrice images stock soldCount category status variants options',
       });
 
     if (!flashSale) {
@@ -80,7 +81,7 @@ export async function GET() {
     const currentTotalMinutes = currentHour * 60 + currentMinute;
 
     const enabledSlots = (flashSale.slots || [])
-      .filter((s) => s.enabled)
+      .filter((s) => s.enabled !== false)
       .sort((a, b) => parseTimeToMinutes(a.startTime) - parseTimeToMinutes(b.startTime));
 
     let isLive = false;
@@ -132,11 +133,61 @@ export async function GET() {
         .filter((item: any) => item.isActive && item.productId && item.productId.status !== 'hidden')
         .map((item: any) => {
           const product = item.productId;
-          const origPrice = item.originalPrice || product.price || 0;
-          const fPrice = item.flashPrice || Math.round(origPrice * 0.7);
-          const discountPct =
-            item.discountPercent ||
-            (origPrice > 0 ? Math.round(((origPrice - fPrice) / origPrice) * 100) : 0);
+          const origPrice = Number(product.price) || Number(item.originalPrice) || 0;
+          const normalSalePrice = (Number(product.salePrice) && Number(product.salePrice) > 0 && Number(product.salePrice) < origPrice)
+            ? Number(product.salePrice)
+            : (Number(item.salePrice) && Number(item.salePrice) > 0 && Number(item.salePrice) < origPrice ? Number(item.salePrice) : origPrice);
+          const productSalePct = origPrice > normalSalePrice
+            ? Math.round(((origPrice - normalSalePrice) / origPrice) * 100)
+            : 0;
+
+          const flashDiscountPercent =
+            (Number(item.flashPercent) && Number(item.flashPercent) > 0)
+              ? Number(item.flashPercent)
+              : (normalSalePrice > item.flashPrice && item.flashPrice > 0
+                ? Math.max(0, Math.round(((normalSalePrice - item.flashPrice) / normalSalePrice) * 100))
+                : 10);
+
+          let safeFlashPrice = (item.flashPrice && item.flashPrice > 0 && item.flashPrice < normalSalePrice)
+            ? item.flashPrice
+            : Math.max(1000, Math.round((normalSalePrice * (1 - flashDiscountPercent / 100)) / 1000) * 1000);
+
+          const totalDiscountPct = Math.min(99, productSalePct + flashDiscountPercent);
+
+          let updatedVariants = product.variants;
+          let minFlash = safeFlashPrice;
+          let maxFlash = minFlash;
+
+          if (Array.isArray(product.variants) && product.variants.length > 0) {
+            updatedVariants = product.variants.map((v: any) => {
+              const vObj = v.toObject ? v.toObject() : (v._doc ? v._doc : v);
+              const vOrig = Number(vObj.price) || origPrice;
+              const vBaseSale = (Number(vObj.salePrice) && Number(vObj.salePrice) > 0 && Number(vObj.salePrice) < vOrig)
+                ? Number(vObj.salePrice)
+                : vOrig;
+              const vFlash = flashDiscountPercent > 0
+                ? Math.round((vBaseSale * (1 - flashDiscountPercent / 100)) / 1000) * 1000
+                : (Number(vObj.flashPrice) && Number(vObj.flashPrice) > 0 ? Number(vObj.flashPrice) : vBaseSale);
+              const vProdSalePct = vOrig > vBaseSale
+                ? Math.round(((vOrig - vBaseSale) / vOrig) * 100)
+                : 0;
+              const vTotalDiscount = Math.min(99, vProdSalePct + flashDiscountPercent);
+
+              return {
+                ...vObj,
+                originalPrice: vOrig,
+                price: vOrig,
+                flashPrice: vFlash,
+                salePrice: vFlash,
+                discountPercent: vTotalDiscount,
+              };
+            });
+            const vPrices = updatedVariants.map((v: any) => v.flashPrice).filter((p: number) => p > 0);
+            if (vPrices.length > 0) {
+              minFlash = Math.min(...vPrices);
+              maxFlash = Math.max(...vPrices);
+            }
+          }
 
           const stock = item.flashStock || 50;
           const sold = Math.min(stock, item.soldCount || 0);
@@ -147,14 +198,20 @@ export async function GET() {
             productId: product._id,
             name: product.name,
             slug: product.slug,
-            image: product.images?.[0] || '',
+            image: getProductCoverImage(product, ''),
             images: product.images || [],
             originalPrice: origPrice,
-            flashPrice: fPrice,
-            discountPercent: discountPct,
+            salePrice: minFlash,
+            flashPrice: minFlash,
+            minPrice: minFlash,
+            maxPrice: maxFlash,
+            discountPercent: totalDiscountPct,
+            flashPercent: flashDiscountPercent,
             flashStock: stock,
             soldCount: sold,
             soldPercent: Math.max(15, soldPercent),
+            variants: updatedVariants,
+            options: product.options || [],
           };
         });
     }
@@ -207,19 +264,85 @@ export async function GET() {
         itemCount: slotItemCount,
         items: (s.items || [])
           .filter((it: any) => it.isActive && it.productId)
-          .map((it: any) => ({
-            _id: it._id,
-            productId: it.productId._id || it.productId,
-            name: it.productId.name,
-            slug: it.productId.slug,
-            image: it.productId.images?.[0] || '',
-            originalPrice: it.originalPrice || it.productId.price || 0,
-            flashPrice: it.flashPrice,
-            discountPercent: it.discountPercent,
-            flashStock: it.flashStock,
-            soldCount: it.soldCount,
-            soldPercent: it.flashStock > 0 ? Math.min(98, Math.round(((it.soldCount || 0) / it.flashStock) * 100)) : 20,
-          })),
+          .map((it: any) => {
+            const product = it.productId;
+            const origPrice = Number(product.price) || Number(it.originalPrice) || 0;
+            const normalSalePrice = (Number(product.salePrice) && Number(product.salePrice) > 0 && Number(product.salePrice) < origPrice)
+              ? Number(product.salePrice)
+              : (Number(it.salePrice) && Number(it.salePrice) > 0 && Number(it.salePrice) < origPrice ? Number(it.salePrice) : origPrice);
+            const productSalePct = origPrice > normalSalePrice
+              ? Math.round(((origPrice - normalSalePrice) / origPrice) * 100)
+              : 0;
+
+            const flashDiscountPercent =
+              (Number(it.flashPercent) && Number(it.flashPercent) > 0)
+                ? Number(it.flashPercent)
+                : (normalSalePrice > it.flashPrice && it.flashPrice > 0
+                  ? Math.max(0, Math.round(((normalSalePrice - it.flashPrice) / normalSalePrice) * 100))
+                  : 10);
+
+            let safeFlashPrice = (it.flashPrice && it.flashPrice > 0 && it.flashPrice < normalSalePrice)
+              ? it.flashPrice
+              : Math.max(1000, Math.round((normalSalePrice * (1 - flashDiscountPercent / 100)) / 1000) * 1000);
+
+            const totalDiscountPct = Math.min(99, productSalePct + flashDiscountPercent);
+
+            let updatedVariants = product.variants;
+            let minFlash = safeFlashPrice;
+            let maxFlash = minFlash;
+
+            if (Array.isArray(product.variants) && product.variants.length > 0) {
+              updatedVariants = product.variants.map((v: any) => {
+                const vObj = v.toObject ? v.toObject() : (v._doc ? v._doc : v);
+                const vOrig = Number(vObj.price) || origPrice;
+                const vBaseSale = (Number(vObj.salePrice) && Number(vObj.salePrice) > 0 && Number(vObj.salePrice) < vOrig)
+                  ? Number(vObj.salePrice)
+                  : vOrig;
+                const vFlash = flashDiscountPercent > 0
+                  ? Math.round((vBaseSale * (1 - flashDiscountPercent / 100)) / 1000) * 1000
+                  : (Number(vObj.flashPrice) && Number(vObj.flashPrice) > 0 ? Number(vObj.flashPrice) : vBaseSale);
+                const vProdSalePct = vOrig > vBaseSale
+                  ? Math.round(((vOrig - vBaseSale) / vOrig) * 100)
+                  : 0;
+                const vTotalDiscount = Math.min(99, vProdSalePct + flashDiscountPercent);
+
+                return {
+                  ...vObj,
+                  originalPrice: vOrig,
+                  price: vOrig,
+                  flashPrice: vFlash,
+                  salePrice: vFlash,
+                  discountPercent: vTotalDiscount,
+                };
+              });
+              const vPrices = updatedVariants.map((v: any) => v.flashPrice).filter((p: number) => p > 0);
+              if (vPrices.length > 0) {
+                minFlash = Math.min(...vPrices);
+                maxFlash = Math.max(...vPrices);
+              }
+            }
+
+            return {
+              _id: it._id,
+              productId: product._id || it.productId,
+              name: product.name,
+              slug: product.slug,
+              image: getProductCoverImage(product, ''),
+              images: product.images || [],
+              originalPrice: origPrice,
+              salePrice: minFlash,
+              flashPrice: minFlash,
+              minPrice: minFlash,
+              maxPrice: maxFlash,
+              discountPercent: totalDiscountPct,
+              flashPercent: flashDiscountPercent,
+              flashStock: it.flashStock,
+              soldCount: it.soldCount,
+              soldPercent: it.flashStock > 0 ? Math.min(98, Math.round(((it.soldCount || 0) / it.flashStock) * 100)) : 20,
+              variants: updatedVariants,
+              options: product.options || [],
+            };
+          }),
       };
     });
 

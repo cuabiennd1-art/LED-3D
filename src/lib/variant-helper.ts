@@ -10,9 +10,30 @@ export interface IVariantItem {
   attributes: Record<string, string>;
   price: number;
   salePrice?: number;
+  flashPrice?: number;
   originalPrice?: number;
+  discountPercent?: number;
   stock: number;
   image?: string;
+  color?: string;
+  size?: string;
+}
+
+/**
+ * Chuẩn hóa chuỗi thuộc tính để so khớp linh hoạt:
+ * - Thay thế non-breaking space \u00a0 thành khoảng trắng thông thường
+ * - Đổi ký tự nhân × và ✕ thành x
+ * - Gom nhiều khoảng trắng thừa thành 1
+ * - Chuyển sang chữ thường và trim()
+ */
+export function normalizeAttrString(str: any): string {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/\u00a0/g, ' ')
+    .replace(/[\u00d7\u2715]/g, 'x')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
 }
 
 /**
@@ -78,12 +99,18 @@ export function generateCartesianVariants(
  */
 export function findMatchingVariant(
   variants: any[],
-  selectedAttributes: Record<string, string>
+  selectedAttributes: Record<string, string>,
+  options?: IProductOption[]
 ): any | null {
   if (!variants || variants.length === 0) return null;
 
-  const selectedKeys = Object.keys(selectedAttributes).filter((k) => selectedAttributes[k]);
+  const selectedKeys = Object.keys(selectedAttributes).filter((k) => selectedAttributes[k]?.trim());
   if (selectedKeys.length === 0) return null;
+
+  // Nếu sản phẩm có danh sách options và người dùng chưa chọn đủ tất cả các options thì chưa thể xác định biến thể đơn lẻ
+  if (options && options.length > 0 && selectedKeys.length < options.length) {
+    return null;
+  }
 
   return (
     variants.find((v) => {
@@ -98,19 +125,21 @@ export function findMatchingVariant(
         attrs['Kích cỡ'] = v.size;
       }
 
-      return selectedKeys.every((key) => {
-        const selVal = selectedAttributes[key]?.trim();
-        if (!selVal) return true;
-
-        if (attrs[key]?.trim() === selVal) return true;
-
-        // Case-insensitive key lookup
-        const entry = Object.entries(attrs).find(
-          ([k]) => k.trim().toLowerCase() === key.trim().toLowerCase()
-        );
-        if (entry && entry[1]?.trim() === selVal) return true;
-
+      const attrEntries = Object.entries(attrs);
+      // Nếu biến thể có nhiều thuộc tính mà số lượng chọn chưa bằng thì không khớp
+      if (attrEntries.length > 0 && selectedKeys.length < attrEntries.length) {
         return false;
+      }
+
+      return selectedKeys.every((key) => {
+        const normKey = normalizeAttrString(key);
+        const normSelVal = normalizeAttrString(selectedAttributes[key]);
+        if (!normSelVal) return true;
+
+        const entry = attrEntries.find(([k]) => normalizeAttrString(k) === normKey);
+        if (!entry) return false;
+
+        return normalizeAttrString(entry[1]) === normSelVal;
       });
     }) || null
   );

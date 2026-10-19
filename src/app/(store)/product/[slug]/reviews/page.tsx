@@ -18,6 +18,7 @@ import {
 import toast from 'react-hot-toast';
 import { apiFetch } from '@/lib/api';
 import { compressImage } from '@/lib/image-utils';
+import { getProductCoverImage } from '@/lib/utils';
 import styles from './page.module.css';
 
 interface ReviewItem {
@@ -396,7 +397,7 @@ export default function ProductReviewsPage() {
           title="Bấm để xem chi tiết sản phẩm"
         >
           <img
-            src={product.images?.[0] || 'https://images.unsplash.com/photo-1581655353564-df123a1eb820?w=400'}
+            src={getProductCoverImage(product, 'https://images.unsplash.com/photo-1581655353564-df123a1eb820?w=400')}
             alt={product.name}
             className={styles.productThumb}
           />

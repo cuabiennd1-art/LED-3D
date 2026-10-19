@@ -17,6 +17,7 @@ export async function GET(request: Request) {
     const category = searchParams.get('category');
     const status = searchParams.get('status') || 'active';
     const sort = searchParams.get('sort') || 'newest';
+    const flashSaleOnly = searchParams.get('flashSale') === 'true' || searchParams.get('filter') === 'flash-sale';
 
     const filter: any = {};
 
@@ -92,7 +93,7 @@ export async function GET(request: Request) {
         const curMin = vnTime.getHours() * 60 + vnTime.getMinutes();
 
         const liveSlot = (flashSale.slots || []).find((slot: any) => {
-          if (!slot.enabled) return false;
+          if (slot.enabled === false) return false;
           let isDateMatch = true;
           if (slot.dateType === 'specific_date' && slot.specificDate) {
             isDateMatch = todayStr === slot.specificDate;
@@ -123,12 +124,77 @@ export async function GET(request: Request) {
             const pIdStr = p._id.toString();
             const fsItem = liveItemMap.get(pIdStr);
             if (fsItem) {
+              const origPrice = Number(p.price) || 0;
+              const normalSalePrice = (Number(p.salePrice) && Number(p.salePrice) > 0 && Number(p.salePrice) < origPrice)
+                ? Number(p.salePrice)
+                : origPrice;
+              const productSalePct = origPrice > normalSalePrice
+                ? Math.round(((origPrice - normalSalePrice) / origPrice) * 100)
+                : 0;
+
+              // % Flash sale (giảm thêm từ giá sale)
+              const flashDiscountPercent =
+                (Number(fsItem.flashPercent) && Number(fsItem.flashPercent) > 0)
+                  ? Number(fsItem.flashPercent)
+                  : (normalSalePrice > fsItem.flashPrice && fsItem.flashPrice > 0
+                    ? Math.max(0, Math.round(((normalSalePrice - fsItem.flashPrice) / normalSalePrice) * 100))
+                    : 10);
+
+              // Tổng % giảm hiển thị: (sale của sản phẩm + flash sale)
+              const totalDiscountPercent = Math.min(99, productSalePct + flashDiscountPercent);
+
+              let safeFlashPrice = (fsItem.flashPrice && fsItem.flashPrice > 0 && fsItem.flashPrice < normalSalePrice)
+                ? fsItem.flashPrice
+                : Math.max(1000, Math.round((normalSalePrice * (1 - flashDiscountPercent / 100)) / 1000) * 1000);
+
+              let updatedVariants = p.variants;
+              let minFlash = safeFlashPrice;
+              let maxFlash = minFlash;
+
+              if (Array.isArray(p.variants) && p.variants.length > 0) {
+                const flashVariants = p.variants.map((v: any) => {
+                  const vOrigPrice = Number(v.price) || origPrice;
+                  const vBaseSale = (Number(v.salePrice) && Number(v.salePrice) > 0 && Number(v.salePrice) < vOrigPrice)
+                    ? Number(v.salePrice)
+                    : vOrigPrice;
+                  const vFlashPrice = flashDiscountPercent > 0
+                    ? Math.round((vBaseSale * (1 - flashDiscountPercent / 100)) / 1000) * 1000
+                    : (Number(v.flashPrice) && Number(v.flashPrice) > 0 ? Number(v.flashPrice) : vBaseSale);
+                  const vProdSalePct = vOrigPrice > vBaseSale
+                    ? Math.round(((vOrigPrice - vBaseSale) / vOrigPrice) * 100)
+                    : 0;
+                  const vTotalDiscount = Math.min(99, vProdSalePct + flashDiscountPercent);
+
+                  return {
+                    ...v,
+                    originalPrice: vOrigPrice,
+                    price: vOrigPrice,
+                    flashPrice: vFlashPrice,
+                    salePrice: vFlashPrice,
+                    discountPercent: vTotalDiscount,
+                  };
+                });
+
+                updatedVariants = flashVariants;
+                const vPrices = flashVariants.map((v: any) => v.flashPrice).filter((pr: number) => pr > 0);
+                if (vPrices.length > 0) {
+                  minFlash = Math.min(...vPrices);
+                  maxFlash = Math.max(...vPrices);
+                }
+              }
+
+              const baseFlash = fsItem.flashPrice || minFlash;
+
               return {
                 ...p,
                 isFlashSale: true,
-                flashPrice: fsItem.flashPrice,
-                salePrice: fsItem.flashPrice,
-                discountPercent: fsItem.discountPercent,
+                flashPrice: minFlash || baseFlash,
+                salePrice: minFlash || baseFlash,
+                minPrice: minFlash || baseFlash,
+                maxPrice: maxFlash || baseFlash,
+                discountPercent: totalDiscountPercent,
+                flashPercent: flashDiscountPercent,
+                variants: updatedVariants,
               };
             }
             return p;
@@ -137,6 +203,12 @@ export async function GET(request: Request) {
       }
     } catch (e) {
       console.error('Error attaching flash sale in /api/products:', e);
+    }
+
+    if (flashSaleOnly) {
+      products = products.filter(
+        (p: any) => Boolean(p.isFlashSale) || (Boolean(p.flashPrice) && Number(p.flashPrice) > 0)
+      );
     }
 
     if (sort === 'flash-sale' || sort === 'discount-desc') {

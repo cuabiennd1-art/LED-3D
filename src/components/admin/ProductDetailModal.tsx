@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { FiX, FiExternalLink, FiEdit2, FiBox, FiTag, FiCalendar, FiDollarSign } from 'react-icons/fi';
 import toast from 'react-hot-toast';
-import { formatPrice, formatDate, sanitizeAndTransformRichDescription } from '@/lib/utils';
+import { formatPrice, formatDate, sanitizeAndTransformRichDescription, isVideoUrl } from '@/lib/utils';
 import LazyImage from '@/components/common/LazyImage';
 import Skeleton from '@/components/common/Skeleton';
 import { apiFetch } from '@/lib/api';
@@ -101,12 +101,23 @@ export default function ProductDetailModal({ productId, onClose }: ProductDetail
                 {/* Left: Image Gallery */}
                 <div className={styles.gallery}>
                   <div className={styles.mainImageWrapper}>
-                    <LazyImage
-                      src={activeImage}
-                      alt={product.name}
-                      aspectRatio="1 / 1"
-                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                    />
+                    {isVideoUrl(activeImage) ? (
+                      <video
+                        src={activeImage}
+                        controls
+                        autoPlay
+                        muted
+                        playsInline
+                        style={{ width: '100%', height: '100%', objectFit: 'contain', background: '#000' }}
+                      />
+                    ) : (
+                      <LazyImage
+                        src={activeImage}
+                        alt={product.name}
+                        aspectRatio="1 / 1"
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      />
+                    )}
                   </div>
 
                   {imagesList.length > 1 && (
@@ -117,11 +128,29 @@ export default function ProductDetailModal({ productId, onClose }: ProductDetail
                           className={`${styles.thumbItem} ${selectedImgIndex === idx ? styles.activeThumb : ''}`}
                           onClick={() => setSelectedImgIndex(idx)}
                         >
-                          <img
-                            src={img}
-                            alt={`Thumbnail ${idx + 1}`}
-                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                          />
+                          {isVideoUrl(img) ? (
+                            <div
+                              style={{
+                                width: '100%',
+                                height: '100%',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                background: '#1e293b',
+                                color: '#fff',
+                                fontSize: 11,
+                                fontWeight: 700,
+                              }}
+                            >
+                              ▶ Video
+                            </div>
+                          ) : (
+                            <img
+                              src={img}
+                              alt={`Thumbnail ${idx + 1}`}
+                              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                            />
+                          )}
                         </div>
                       ))}
                     </div>

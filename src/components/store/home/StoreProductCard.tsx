@@ -4,6 +4,7 @@ import React, { memo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { FiTruck, FiPlus, FiShoppingCart } from 'react-icons/fi';
+import { getProductCoverImage } from '@/lib/utils';
 import styles from '@/app/(store)/demo/page.module.css';
 
 export interface ProductItem {
@@ -24,6 +25,8 @@ export interface ProductItem {
   discountPercent?: number;
   tags?: string[];
   category?: any;
+  stock?: number;
+  flashStock?: number;
 }
 
 export function formatPrice(price: number) {
@@ -99,16 +102,23 @@ const StoreProductCardComponent: React.FC<StoreProductCardProps> = ({
       : (product.salePrice && product.salePrice > effectivePrice ? product.salePrice : 0);
 
   const discount =
-    effectiveOriginalPrice > effectivePrice
-      ? calcDiscount(effectiveOriginalPrice, effectivePrice)
-      : (product.discountPercent || null);
+    isFlash && product.discountPercent
+      ? product.discountPercent
+      : (effectiveOriginalPrice > effectivePrice
+          ? calcDiscount(effectiveOriginalPrice, effectivePrice)
+          : (product.discountPercent || null));
 
-  const displayImage =
-    product.images?.[0] || product.image || 'https://images.unsplash.com/photo-1581655353564-df123a1eb820?w=400';
+  const displayImage = getProductCoverImage(
+    product,
+    'https://images.unsplash.com/photo-1581655353564-df123a1eb820?w=400'
+  );
 
   if (viewMode === 'list') {
     return (
-      <Link href={`/product/${product.slug || product._id}`} className={styles.listCard}>
+      <Link 
+        href={`/product/${product.slug || product._id}`} 
+        className={`${styles.listCard} ${isFlash ? styles.listCardFlash : ''}`}
+      >
         <div className={styles.listImgWrap}>
           <Image
             src={displayImage}
@@ -121,7 +131,7 @@ const StoreProductCardComponent: React.FC<StoreProductCardProps> = ({
           {isFlash ? (
             <div className={styles.cardFlashBadge} style={{ transform: 'scale(0.85)', transformOrigin: 'top right' }}>
               <span className={styles.cardFlashPercent}>-{product.discountPercent || discount || 20}%</span>
-              <span className={styles.cardFlashLabel}>⚡ SALE</span>
+              <span className={styles.cardFlashLabel}>FLASH SALE</span>
             </div>
           ) : discount ? (
             <div className={styles.listDiscountBadge}>
@@ -133,7 +143,13 @@ const StoreProductCardComponent: React.FC<StoreProductCardProps> = ({
         <div className={styles.listInfo}>
           {isFlash && (
             <div className={styles.cardFlashPill}>
-              <span>⚡ FLASH SALE</span>
+              <span className={styles.cardFlashPillBolt}>⚡</span>
+              <span className={styles.cardFlashPillText}>FLASH SALE</span>
+              {Boolean(product.discountPercent || discount) && (
+                <span className={styles.cardFlashPillDiscount}>
+                  -{product.discountPercent || discount}%
+                </span>
+              )}
             </div>
           )}
           <p className={styles.listName}>{product.name}</p>
@@ -144,7 +160,7 @@ const StoreProductCardComponent: React.FC<StoreProductCardProps> = ({
             </span>
           </div>
           <div className={styles.listPriceRow}>
-            <span className={styles.listPrice}>
+            <span className={`${styles.listPrice} ${isFlash ? styles.cardFlashPrice : ''}`}>
               {formatPrice(effectivePrice)}
             </span>
             {effectiveOriginalPrice > effectivePrice && (
@@ -167,7 +183,10 @@ const StoreProductCardComponent: React.FC<StoreProductCardProps> = ({
   }
 
   return (
-    <Link href={`/product/${product.slug || product._id}`} className={styles.shopeeCard}>
+    <Link 
+      href={`/product/${product.slug || product._id}`} 
+      className={`${styles.shopeeCard} ${isFlash ? styles.shopeeCardFlash : ''}`}
+    >
       <div className={styles.cardImgWrap}>
         <Image
           src={displayImage}
@@ -181,7 +200,7 @@ const StoreProductCardComponent: React.FC<StoreProductCardProps> = ({
         {isFlash ? (
           <div className={styles.cardFlashBadge}>
             <span className={styles.cardFlashPercent}>-{product.discountPercent || discount || 20}%</span>
-            <span className={styles.cardFlashLabel}>⚡ FLASH SALE</span>
+            <span className={styles.cardFlashLabel}>FLASH SALE</span>
           </div>
         ) : discount ? (
           <div className={styles.discountBadge}>
@@ -198,12 +217,18 @@ const StoreProductCardComponent: React.FC<StoreProductCardProps> = ({
         <div>
           {isFlash && (
             <div className={styles.cardFlashPill}>
-              <span>⚡ FLASH SALE</span>
+              <span className={styles.cardFlashPillBolt}>⚡</span>
+              <span className={styles.cardFlashPillText}>FLASH SALE</span>
+              {Boolean(product.discountPercent || discount) && (
+                <span className={styles.cardFlashPillDiscount}>
+                  -{product.discountPercent || discount}%
+                </span>
+              )}
             </div>
           )}
           <p className={styles.cardName}>{product.name}</p>
           <div className={styles.cardPriceRow}>
-            <span className={styles.cardCurrentPrice}>
+            <span className={`${styles.cardCurrentPrice} ${isFlash ? styles.cardFlashPrice : ''}`}>
               {formatPrice(effectivePrice)}
             </span>
             {effectiveOriginalPrice > effectivePrice && (
@@ -213,6 +238,18 @@ const StoreProductCardComponent: React.FC<StoreProductCardProps> = ({
             )}
           </div>
         </div>
+
+        {isFlash && (
+          <div className={styles.cardFlashFireBar}>
+            <div 
+              className={styles.cardFlashFireFill} 
+              style={{ width: `${Math.min(95, Math.max(25, Math.round(((product.soldCount ?? product.sold ?? 15) / Math.max(25, (product.stock || 50) + (product.soldCount ?? 15))) * 100)))}%` }} 
+            />
+            <span className={styles.cardFlashFireText}>
+              🔥 ĐANG BÁN CHẠY
+            </span>
+          </div>
+        )}
 
         <div className={styles.cardFooter}>
           <div className={styles.cardRatingWrap}>

@@ -14,8 +14,10 @@ function sanitizeItems(items: any[]): any[] {
     .map((it: any) => ({
       productId: it.productId?._id || it.productId,
       originalPrice: Number(it.originalPrice) || 0,
+      salePrice: Number(it.salePrice) || 0,
       flashPrice: Number(it.flashPrice) || 0,
       discountPercent: Number(it.discountPercent) || 0,
+      flashPercent: Number(it.flashPercent) || 0,
       flashStock: Math.max(1, Number(it.flashStock) || 50),
       soldCount: Number(it.soldCount) || 0,
       isActive: it.isActive !== undefined ? it.isActive : true,
@@ -43,13 +45,17 @@ export async function GET() {
 
       const defaultItems = sampleProducts.map((p) => {
         const origPrice = p.price || 300000;
-        const discountPct = 35;
-        const fPrice = Math.round((origPrice * (100 - discountPct)) / 100000) * 1000;
+        const normSale = p.salePrice && p.salePrice > 0 && p.salePrice < origPrice ? p.salePrice : origPrice;
+        const prodSalePct = origPrice > normSale ? Math.round(((origPrice - normSale) / origPrice) * 100) : 0;
+        const flashPct = 15;
+        const fPrice = Math.max(1000, Math.round((normSale * (1 - flashPct / 100)) / 1000) * 1000);
         return {
           productId: p._id,
           originalPrice: origPrice,
-          flashPrice: fPrice > 0 ? fPrice : Math.round(origPrice * 0.65),
-          discountPercent: discountPct,
+          salePrice: normSale,
+          flashPrice: fPrice,
+          flashPercent: flashPct,
+          discountPercent: Math.min(99, prodSalePct + flashPct),
           flashStock: Math.max(20, Math.min(100, p.stock || 50)),
           soldCount: Math.floor(Math.random() * 15) + 8,
           isActive: true,
@@ -129,13 +135,17 @@ export async function GET() {
 
         const defaultItems = activeProducts.map((p) => {
           const origPrice = p.price || 300000;
-          const discountPct = 35;
-          const fPrice = Math.round((origPrice * (100 - discountPct)) / 100000) * 1000;
+          const normSale = p.salePrice && p.salePrice > 0 && p.salePrice < origPrice ? p.salePrice : origPrice;
+          const prodSalePct = origPrice > normSale ? Math.round(((origPrice - normSale) / origPrice) * 100) : 0;
+          const flashPct = 15;
+          const fPrice = Math.max(1000, Math.round((normSale * (1 - flashPct / 100)) / 1000) * 1000);
           return {
             productId: p._id,
             originalPrice: origPrice,
-            flashPrice: fPrice > 0 ? fPrice : Math.round(origPrice * 0.65),
-            discountPercent: discountPct,
+            salePrice: normSale,
+            flashPrice: fPrice,
+            flashPercent: flashPct,
+            discountPercent: Math.min(99, prodSalePct + flashPct),
             flashStock: Math.max(20, Math.min(100, p.stock || 50)),
             soldCount: Math.floor(Math.random() * 15) + 8,
             isActive: true,

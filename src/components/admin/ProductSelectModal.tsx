@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { FiSearch, FiX, FiCheck, FiPackage } from 'react-icons/fi';
-import { formatPrice } from '@/lib/utils';
+import { formatPrice, getProductCoverImage } from '@/lib/utils';
 import { apiFetch } from '@/lib/api';
 import styles from './ProductSelectModal.module.css';
 
@@ -164,7 +164,7 @@ export default function ProductSelectModal({
                       <td>
                         <div className={styles.productCell}>
                           <img
-                            src={p.images?.[0] || '/file.svg'}
+                            src={getProductCoverImage(p, '/file.svg')}
                             alt={p.name}
                             className={styles.productThumb}
                           />

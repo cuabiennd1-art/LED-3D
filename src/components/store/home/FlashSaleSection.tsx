@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { FiChevronRight, FiArrowRight } from 'react-icons/fi';
 import { RiFlashlightFill } from 'react-icons/ri';
+import { getProductCoverImage } from '@/lib/utils';
 import styles from './FlashSaleSection.module.css';
 
 function formatPrice(price: number) {
@@ -256,6 +257,7 @@ const FlashSaleSectionComponent: React.FC<FlashSaleSectionProps> = ({
       <div className={styles.carouselWrapper}>
         <div className={styles.flashCarousel}>
           {displayItems.map((item: any, i: number) => {
+            const hasRange = item.minPrice && item.maxPrice && item.minPrice < item.maxPrice;
             const originalPrice = item.originalPrice || item.price || 0;
             const salePrice = item.flashPrice || item.salePrice || item.price || 0;
             const discount =
@@ -275,11 +277,7 @@ const FlashSaleSectionComponent: React.FC<FlashSaleSectionProps> = ({
                 {/* 1:1 Image with Zoom */}
                 <div className={styles.flashImgWrap}>
                   <Image
-                    src={
-                      item.image ||
-                      item.images?.[0] ||
-                      'https://images.unsplash.com/photo-1581655353564-df123a1eb820?w=400'
-                    }
+                    src={getProductCoverImage(item, 'https://images.unsplash.com/photo-1581655353564-df123a1eb820?w=400')}
                     alt={item.name || 'Sản phẩm Flash Sale'}
                     fill
                     sizes="(max-width: 599px) 50vw, (max-width: 1199px) 25vw, 16vw"
@@ -296,7 +294,7 @@ const FlashSaleSectionComponent: React.FC<FlashSaleSectionProps> = ({
                 {/* Info: Price + Shopee Fire Bar */}
                 <div className={styles.flashInfo}>
                   <div className={styles.flashPrice}>
-                    {formatPrice(salePrice)}
+                    {hasRange ? `Từ ${formatPrice(item.minPrice)}` : formatPrice(salePrice)}
                   </div>
                   {originalPrice > salePrice && (
                     <div className={styles.flashOldPrice}>

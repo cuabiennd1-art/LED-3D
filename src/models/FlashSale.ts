@@ -5,7 +5,9 @@ export interface IFlashSaleItem {
   productId: mongoose.Types.ObjectId;
   flashPrice: number;
   originalPrice: number;
+  salePrice?: number;
   discountPercent: number;
+  flashPercent?: number;
   flashStock?: number;
   soldCount: number;
   isActive: boolean;
@@ -52,7 +54,9 @@ const FlashSaleItemSchema = new Schema<IFlashSaleItem>(
     productId: { type: Schema.Types.ObjectId, ref: 'Product', required: true },
     flashPrice: { type: Number, required: true, min: 0 },
     originalPrice: { type: Number, required: true, min: 0 },
+    salePrice: { type: Number, default: 0, min: 0 },
     discountPercent: { type: Number, default: 0, min: 0, max: 100 },
+    flashPercent: { type: Number, default: 0, min: 0, max: 100 },
     flashStock: { type: Number, required: true, default: 50, min: 1 },
     soldCount: { type: Number, default: 0, min: 0 },
     isActive: { type: Boolean, default: true },

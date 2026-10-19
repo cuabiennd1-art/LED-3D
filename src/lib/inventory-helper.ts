@@ -1,4 +1,5 @@
 import Product from '@/models/Product';
+import { getProductCoverImage } from '@/lib/utils';
 
 export interface ILowStockWarningItem {
   productName: string;
@@ -48,7 +49,7 @@ export async function checkOrderLowStock(order: any): Promise<ILowStockWarningIt
         const vTitle = matchedV?.title || item.variant?.title || 'Phân loại đã chọn';
         lowStockItems.push({
           productName: prod.name,
-          productImage: matchedV?.image || item.image || prod.images?.[0] || '/file.svg',
+          productImage: matchedV?.image || item.image || getProductCoverImage(prod, '/file.svg'),
           variantTitle: vTitle,
           orderedQuantity: qty,
           availableStock: avail,
@@ -60,7 +61,7 @@ export async function checkOrderLowStock(order: any): Promise<ILowStockWarningIt
       if (qty > avail) {
         lowStockItems.push({
           productName: prod.name,
-          productImage: item.image || prod.images?.[0] || '/file.svg',
+          productImage: item.image || getProductCoverImage(prod, '/file.svg'),
           variantTitle: 'Mặc định',
           orderedQuantity: qty,
           availableStock: avail,
