@@ -677,7 +677,7 @@ export default function CheckoutPage() {
           </div>
 
           <div className={styles.paymentList}>
-            {/* {paymentConfig.bankTransferEnabled && (
+            {paymentConfig.bankTransferEnabled && (
               <div
                 className={`${styles.paymentOption} ${paymentMethod === 'bank_transfer' ? styles.paymentActive : ''}`}
                 onClick={() => setPaymentMethod('bank_transfer')}
@@ -697,7 +697,7 @@ export default function CheckoutPage() {
                   </span>
                 </div>
               </div>
-            )} */}
+            )}
 
             {paymentConfig.codEnabled && (
               <div
