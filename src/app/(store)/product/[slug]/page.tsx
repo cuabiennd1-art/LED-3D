@@ -110,9 +110,20 @@ export default function ProductDetailPage() {
   // Video player custom controls (plays inline on iOS/iPhone without forcing fullscreen)
   const [isVideoMuted, setIsVideoMuted] = useState(true);
   const [isVideoPlaying, setIsVideoPlaying] = useState(true);
-  const [videoProgress, setVideoProgress] = useState(0);
+  const [isDesktopScreen, setIsDesktopScreen] = useState(false);
   const mobileVideoRef = React.useRef<HTMLVideoElement | null>(null);
   const desktopVideoRef = React.useRef<HTMLVideoElement | null>(null);
+  const mobileProgressBarRef = React.useRef<HTMLDivElement | null>(null);
+  const desktopProgressBarRef = React.useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const updateScreen = () => {
+      setIsDesktopScreen(window.innerWidth >= 1024);
+    };
+    updateScreen();
+    window.addEventListener('resize', updateScreen);
+    return () => window.removeEventListener('resize', updateScreen);
+  }, []);
 
   const toggleVideoPlayPause = (e: React.MouseEvent, isMobile = true) => {
     e.stopPropagation();
@@ -132,15 +143,29 @@ export default function ProductDetailPage() {
     e.stopPropagation();
     const vid = isMobile ? mobileVideoRef.current : desktopVideoRef.current;
     if (!vid) return;
+
     const nextMuted = !vid.muted;
     vid.muted = nextMuted;
     setIsVideoMuted(nextMuted);
+
+    // Khi người dùng trực tiếp bấm BẬT TIẾNG, đảm bảo video tiếp tục phát trơn tru
+    if (!nextMuted && vid.paused) {
+      vid.play()
+        .then(() => setIsVideoPlaying(true))
+        .catch(() => {
+          vid.muted = true;
+          setIsVideoMuted(true);
+          vid.play().catch(() => {});
+        });
+    }
   };
 
-  const handleVideoTimeUpdate = (e: React.SyntheticEvent<HTMLVideoElement>) => {
+  const handleVideoTimeUpdate = (e: React.SyntheticEvent<HTMLVideoElement>, isMobile = true) => {
     const vid = e.currentTarget;
-    if (vid.duration && vid.duration > 0) {
-      setVideoProgress((vid.currentTime / vid.duration) * 100);
+    const bar = isMobile ? mobileProgressBarRef.current : desktopProgressBarRef.current;
+    if (bar && vid.duration && vid.duration > 0) {
+      const pct = Math.min(100, Math.max(0, (vid.currentTime / vid.duration) * 100));
+      bar.style.width = `${pct}%`;
     }
   };
 
@@ -1031,19 +1056,12 @@ export default function ProductDetailPage() {
     setActiveImageIndex((prev) => (prev + 1) % images.length);
   };
 
-  // Khi video phát hết -> tự động chuyển sang ảnh hoặc video tiếp theo
-  const handleVideoEnded = () => {
-    if (images && images.length > 1) {
-      setActiveImageIndex((prev) => (prev + 1) % images.length);
-    }
-  };
-
   // Tự động chuyển đổi ảnh chính sản phẩm sau 3 giây (đối với ảnh)
-  // Nếu là video thì video phải chạy hết mới nảy sang ảnh hoặc video tiếp theo (qua sự kiện onEnded)
+  // Nếu là video thì không dùng timer tự động nhảy để khách xem và nghe trọn vẹn
   useEffect(() => {
     if (!images || images.length <= 1 || isGalleryPaused) return;
     const currentMedia = images[activeImageIndex];
-    if (isVideoUrl(currentMedia)) return; // Không dùng timer cho video, chờ video chạy hết
+    if (isVideoUrl(currentMedia)) return; // Không dùng timer cho video
 
     const timer = setTimeout(() => {
       setActiveImageIndex((prev) => (prev + 1) % images.length);
@@ -1051,6 +1069,31 @@ export default function ProductDetailPage() {
 
     return () => clearTimeout(timer);
   }, [images, isGalleryPaused, activeImageIndex]);
+
+  // Tự động phát khi chuyển đến slide video
+  useEffect(() => {
+    if (mobileProgressBarRef.current) mobileProgressBarRef.current.style.width = '0%';
+    if (desktopProgressBarRef.current) desktopProgressBarRef.current.style.width = '0%';
+
+    const currentMedia = images[activeImageIndex] || images[0];
+    if (!isVideoUrl(currentMedia)) return;
+
+    const vid = isDesktopScreen ? desktopVideoRef.current : mobileVideoRef.current;
+    if (vid) {
+      vid.currentTime = 0;
+      vid.muted = isVideoMuted;
+      vid.defaultMuted = true;
+      vid.play()
+        .then(() => setIsVideoPlaying(true))
+        .catch(() => {
+          vid.muted = true;
+          setIsVideoMuted(true);
+          vid.play()
+            .then(() => setIsVideoPlaying(true))
+            .catch(() => setIsVideoPlaying(false));
+        });
+    }
+  }, [activeImageIndex, images, isDesktopScreen]);
 
   const handleOpenExpandModal = (tab: 'desc' | 'reviews') => {
     setExpandModalTab(tab);
@@ -1455,7 +1498,7 @@ export default function ProductDetailPage() {
               setTimeout(() => setIsGalleryPaused(false), 2500);
             }}
           >
-            {isVideoUrl(images[activeImageIndex] || images[0]) ? (
+            {!isDesktopScreen && isVideoUrl(images[activeImageIndex] || images[0]) ? (
               <div
                 style={{
                   width: '100%',
@@ -1471,6 +1514,7 @@ export default function ProductDetailPage() {
                 onClick={(e) => toggleVideoPlayPause(e, true)}
               >
                 <video
+                  ref={mobileVideoRef}
                   key={images[activeImageIndex] || images[0]}
                   src={images[activeImageIndex] || images[0]}
                   playsInline
@@ -1481,31 +1525,10 @@ export default function ProductDetailPage() {
                   disablePictureInPicture
                   controlsList="nofullscreen nodownload noremoteplayback"
                   {...({ 'webkit-playsinline': 'true', 'x5-playsinline': 'true' } as any)}
-                  ref={(el) => {
-                    mobileVideoRef.current = el;
-                    if (el) {
-                      el.setAttribute('playsinline', 'true');
-                      el.setAttribute('webkit-playsinline', 'true');
-                      el.setAttribute('x5-playsinline', 'true');
-                      el.setAttribute('controlsList', 'nofullscreen nodownload noremoteplayback');
-                      el.setAttribute('disablepictureinpicture', 'true');
-                      el.muted = isVideoMuted;
-                      el.defaultMuted = true;
-                      el.play()
-                        .then(() => setIsVideoPlaying(true))
-                        .catch(() => setIsVideoPlaying(false));
-                    }
-                  }}
                   onPlay={() => setIsVideoPlaying(true)}
                   onPause={() => setIsVideoPlaying(false)}
-                  onTimeUpdate={handleVideoTimeUpdate}
-                  onCanPlay={(e) => {
-                    e.currentTarget.muted = isVideoMuted;
-                    e.currentTarget.play().catch(() => {});
-                  }}
-                  loop={images.length <= 1}
-                  onEnded={handleVideoEnded}
-                  onError={handleVideoEnded}
+                  onTimeUpdate={(e) => handleVideoTimeUpdate(e, true)}
+                  loop
                   className={styles.mobileMainImage}
                   style={{ width: '100%', height: '100%', objectFit: 'contain', pointerEvents: 'none' }}
                 />
@@ -1612,14 +1635,16 @@ export default function ProductDetailPage() {
                     height: 3,
                     background: 'rgba(255, 255, 255, 0.25)',
                     zIndex: 4,
+                    pointerEvents: 'none',
                   }}
                 >
                   <div
+                    ref={mobileProgressBarRef}
                     style={{
                       height: '100%',
-                      width: `${videoProgress}%`,
+                      width: '0%',
                       background: 'var(--primary, #ee4d2d)',
-                      transition: 'width 0.15s linear',
+                      transition: 'width 0.1s linear',
                     }}
                   />
                 </div>
@@ -2158,7 +2183,7 @@ export default function ProductDetailPage() {
               onMouseEnter={() => setIsGalleryPaused(true)}
               onMouseLeave={() => setIsGalleryPaused(false)}
             >
-              {isVideoUrl(images[activeImageIndex] || images[0]) ? (
+              {isDesktopScreen && isVideoUrl(images[activeImageIndex] || images[0]) ? (
                 <div
                   style={{
                     width: '100%',
@@ -2174,6 +2199,7 @@ export default function ProductDetailPage() {
                   onClick={(e) => toggleVideoPlayPause(e, false)}
                 >
                   <video
+                    ref={desktopVideoRef}
                     key={images[activeImageIndex] || images[0]}
                     src={images[activeImageIndex] || images[0]}
                     playsInline
@@ -2184,31 +2210,10 @@ export default function ProductDetailPage() {
                     disablePictureInPicture
                     controlsList="nofullscreen nodownload noremoteplayback"
                     {...({ 'webkit-playsinline': 'true', 'x5-playsinline': 'true' } as any)}
-                    ref={(el) => {
-                      desktopVideoRef.current = el;
-                      if (el) {
-                        el.setAttribute('playsinline', 'true');
-                        el.setAttribute('webkit-playsinline', 'true');
-                        el.setAttribute('x5-playsinline', 'true');
-                        el.setAttribute('controlsList', 'nofullscreen nodownload noremoteplayback');
-                        el.setAttribute('disablepictureinpicture', 'true');
-                        el.muted = isVideoMuted;
-                        el.defaultMuted = true;
-                        el.play()
-                          .then(() => setIsVideoPlaying(true))
-                          .catch(() => setIsVideoPlaying(false));
-                      }
-                    }}
                     onPlay={() => setIsVideoPlaying(true)}
                     onPause={() => setIsVideoPlaying(false)}
-                    onTimeUpdate={handleVideoTimeUpdate}
-                    onCanPlay={(e) => {
-                      e.currentTarget.muted = isVideoMuted;
-                      e.currentTarget.play().catch(() => {});
-                    }}
-                    loop={images.length <= 1}
-                    onEnded={handleVideoEnded}
-                    onError={handleVideoEnded}
+                    onTimeUpdate={(e) => handleVideoTimeUpdate(e, false)}
+                    loop
                     className={styles.pcMainImage}
                     style={{ width: '100%', height: '100%', objectFit: 'contain', pointerEvents: 'none' }}
                   />
@@ -2315,14 +2320,16 @@ export default function ProductDetailPage() {
                       height: 3,
                       background: 'rgba(255, 255, 255, 0.25)',
                       zIndex: 4,
+                      pointerEvents: 'none',
                     }}
                   >
                     <div
+                      ref={desktopProgressBarRef}
                       style={{
                         height: '100%',
-                        width: `${videoProgress}%`,
+                        width: '0%',
                         background: 'var(--primary, #ee4d2d)',
-                        transition: 'width 0.15s linear',
+                        transition: 'width 0.1s linear',
                       }}
                     />
                   </div>
