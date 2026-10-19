@@ -12,11 +12,13 @@ import {
   FiTag,
   FiSliders,
   FiLayers,
+  FiVideo,
 } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import LazyImage from '@/components/common/LazyImage';
 import Skeleton from '@/components/common/Skeleton';
 import { apiFetch } from '@/lib/api';
+import { isVideoUrl } from '@/lib/utils';
 import {
   IProductOption,
   IVariantItem,
@@ -60,6 +62,7 @@ export default function ProductEditModal({
   });
 
   const [images, setImages] = useState<string[]>([]);
+  const [video, setVideo] = useState('');
   const [newImageUrl, setNewImageUrl] = useState('');
 
   // Senior Architecture: Options metadata & Cartesian Variants
@@ -75,7 +78,11 @@ export default function ProductEditModal({
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [isUploadingVideo, setIsUploadingVideo] = useState(false);
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const videoInputRef = useRef<HTMLInputElement | null>(null);
 
   // Helper to format number with thousand dots separator (VD: 100.000)
   const formatWithDots = (val: string | number | undefined | null) => {
@@ -120,7 +127,12 @@ export default function ProductEditModal({
             status: prod.status || 'active',
             description: prod.description || '',
           });
-          setImages(prod.images && prod.images.length > 0 ? prod.images : []);
+          const prodImages = prod.images && prod.images.length > 0 ? [...prod.images] : [];
+          if (prod.video && !prodImages.includes(prod.video)) {
+            prodImages.push(prod.video);
+          }
+          setImages(prodImages);
+          setVideo(prod.video || '');
 
           // Load or extract options
           let loadedOptions: IProductOption[] = [];
@@ -207,10 +219,14 @@ export default function ProductEditModal({
 
   if (!productId) return null;
 
-  // Add Image via URL
+  // Add Image or Video via URL
   const handleAddImageUrl = () => {
     if (!newImageUrl.trim()) return;
-    setImages((prev) => [...prev, newImageUrl.trim()]);
+    const url = newImageUrl.trim();
+    setImages((prev) => [...prev, url]);
+    if (isVideoUrl(url)) {
+      setVideo(url);
+    }
     setNewImageUrl('');
   };
 
@@ -239,11 +255,89 @@ export default function ProductEditModal({
       toast.error('Lỗi khi tải file ảnh');
     } finally {
       setIsUploading(false);
+      if (e.target) e.target.value = '';
+    }
+  };
+
+  // Upload video to /api/upload
+  const handleVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 100 * 1024 * 1024) {
+      toast.error('Kích thước video không được vượt quá 100MB');
+      return;
+    }
+
+    const data = new FormData();
+    data.append('file', file);
+
+    setIsUploadingVideo(true);
+    try {
+      const res = await apiFetch('/api/upload', {
+        method: 'POST',
+        body: data,
+      });
+      const resData = await res.json();
+      if (resData.success && resData.data?.url) {
+        const vidUrl = resData.data.url;
+        setImages((prev) => [...prev, vidUrl]);
+        setVideo(vidUrl);
+        toast.success('Tải video lên thành công!');
+      } else {
+        toast.error(resData.message || 'Lỗi tải video lên');
+      }
+    } catch (err) {
+      toast.error('Lỗi khi tải file video');
+    } finally {
+      setIsUploadingVideo(false);
+      if (e.target) e.target.value = '';
     }
   };
 
   const handleRemoveImage = (index: number) => {
+    const removedUrl = images[index];
     setImages((prev) => prev.filter((_, i) => i !== index));
+    if (video === removedUrl) {
+      setVideo('');
+    }
+  };
+
+  // Drag & drop reorder handlers for images / videos
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    setDraggedIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', String(index));
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (dragOverIndex !== index) {
+      setDragOverIndex(index);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent, targetIndex: number) => {
+    e.preventDefault();
+    if (draggedIndex === null || draggedIndex === targetIndex) {
+      setDraggedIndex(null);
+      setDragOverIndex(null);
+      return;
+    }
+    setImages((prev) => {
+      const updated = [...prev];
+      const [moved] = updated.splice(draggedIndex, 1);
+      updated.splice(targetIndex, 0, moved);
+      return updated;
+    });
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null);
+    setDragOverIndex(null);
   };
 
   // ================= OPTION BUILDER HANDLERS =================
@@ -415,12 +509,14 @@ export default function ProductEditModal({
       };
     });
 
+    const determinedVideo = video || images.find(isVideoUrl) || '';
     const payload = {
       name: formData.name.trim(),
       price: rawPrice,
       salePrice: rawSalePrice,
       category: formData.category,
       images: images.length > 0 ? images : ['/file.svg'],
+      video: determinedVideo,
       stock: Number(formData.stock) || 0,
       isFeatured: formData.isFeatured,
       status: formData.status,
@@ -549,25 +645,65 @@ export default function ProductEditModal({
               </div>
             </div>
 
-            {/* Row 3: Images Manager */}
+            {/* Row 3: Images & Videos Manager */}
             <div className={styles.formGroup}>
-              <label className={styles.label}>Hình ảnh sản phẩm</label>
+              <label className={styles.label}>
+                Hình ảnh & Video sản phẩm
+                <span className={styles.dragHint}>(Kéo thả các ô để thay đổi thứ tự hiển thị)</span>
+              </label>
               <div className={styles.imageSection}>
                 {images.length > 0 && (
                   <div className={styles.imageList}>
-                    {images.map((img, idx) => (
-                      <div key={idx} className={styles.imageItem}>
-                        <LazyImage src={img} alt={`Ảnh ${idx + 1}`} style={{ width: '100%', height: '100%' }} />
-                        <button
-                          type="button"
-                          className={styles.removeImgBtn}
-                          onClick={() => handleRemoveImage(idx)}
-                          title="Xóa ảnh này"
+                    {images.map((img, idx) => {
+                      const isVid = isVideoUrl(img);
+                      const isDragging = draggedIndex === idx;
+                      const isDragOver = dragOverIndex === idx;
+                      return (
+                        <div
+                          key={idx}
+                          draggable
+                          onDragStart={(e) => handleDragStart(e, idx)}
+                          onDragOver={(e) => handleDragOver(e, idx)}
+                          onDrop={(e) => handleDrop(e, idx)}
+                          onDragEnd={handleDragEnd}
+                          className={`${styles.imageItem} ${isDragging ? styles.imageItemDragging : ''} ${isDragOver ? styles.imageItemDragOver : ''}`}
+                          title="Kéo thả để sắp xếp thứ tự hiển thị"
                         >
-                          ×
-                        </button>
-                      </div>
-                    ))}
+                          <span className={`${styles.imageIndexBadge} ${idx === 0 ? styles.coverBadge : ''}`}>
+                            {idx === 0 ? 'Bìa' : `#${idx + 1}`}
+                          </span>
+                          {isVid ? (
+                            <>
+                              <video
+                                src={img}
+                                className={styles.thumbVideo}
+                                muted
+                                preload="metadata"
+                                playsInline
+                              />
+                              <div className={styles.videoBadge}>
+                                <FiVideo size={10} /> Video
+                              </div>
+                            </>
+                          ) : (
+                            <LazyImage src={img} alt={`Ảnh ${idx + 1}`} style={{ width: '100%', height: '100%' }} />
+                          )}
+                          <button
+                            type="button"
+                            draggable={false}
+                            className={styles.removeImgBtn}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRemoveImage(idx);
+                            }}
+                            onMouseDown={(e) => e.stopPropagation()}
+                            title={isVid ? 'Xóa video này' : 'Xóa ảnh này'}
+                          >
+                            ×
+                          </button>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
 
@@ -575,7 +711,7 @@ export default function ProductEditModal({
                   <input
                     type="text"
                     className={styles.input}
-                    placeholder="Nhập đường dẫn URL ảnh hoặc upload..."
+                    placeholder="Nhập đường dẫn URL ảnh/video hoặc upload..."
                     value={newImageUrl}
                     onChange={(e) => setNewImageUrl(e.target.value)}
                     onKeyDown={(e) => {
@@ -597,9 +733,18 @@ export default function ProductEditModal({
                     type="button"
                     className={styles.uploadBtn}
                     onClick={() => fileInputRef.current?.click()}
-                    disabled={isUploading}
+                    disabled={isUploading || isUploadingVideo}
                   >
                     <FiUploadCloud /> {isUploading ? 'Đang tải...' : 'Upload ảnh'}
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.uploadVideoBtn}
+                    onClick={() => videoInputRef.current?.click()}
+                    disabled={isUploading || isUploadingVideo}
+                    title="Tải video MP4/WebM từ thiết bị"
+                  >
+                    <FiVideo /> {isUploadingVideo ? 'Đang tải video...' : 'Upload video'}
                   </button>
                   <input
                     type="file"
@@ -607,6 +752,13 @@ export default function ProductEditModal({
                     style={{ display: 'none' }}
                     accept="image/*"
                     onChange={handleFileUpload}
+                  />
+                  <input
+                    type="file"
+                    ref={videoInputRef}
+                    style={{ display: 'none' }}
+                    accept="video/*"
+                    onChange={handleVideoUpload}
                   />
                 </div>
               </div>

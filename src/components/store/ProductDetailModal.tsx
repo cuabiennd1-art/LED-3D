@@ -14,7 +14,7 @@ import {
   FiChevronRight,
 } from 'react-icons/fi';
 import toast from 'react-hot-toast';
-import { formatPrice } from '@/lib/utils';
+import { formatPrice, isVideoUrl } from '@/lib/utils';
 import { useCart } from '@/contexts/CartContext';
 import {
   IProductOption,
@@ -253,10 +253,18 @@ export default function ProductDetailModal({
 
   if (!product) return null;
 
-  const images: string[] =
-    product.images && product.images.length > 0
-      ? product.images
+  const images: string[] = useMemo(() => {
+    let list: string[] = [];
+    if (product?.images && Array.isArray(product.images) && product.images.length > 0) {
+      list = [...product.images];
+    }
+    if (product?.video && !list.includes(product.video)) {
+      list.push(product.video);
+    }
+    return list.length > 0
+      ? list
       : ['https://images.unsplash.com/photo-1581655353564-df123a1eb820?w=400'];
+  }, [product?.images, product?.video]);
 
   // Close lightbox on Escape, navigate with arrow keys
   useEffect(() => {
@@ -387,11 +395,37 @@ export default function ProductDetailModal({
               title="Bấm để xem ảnh to full màn hình"
               aria-label="Xem ảnh phóng to full màn hình"
             >
-              <img
-                src={images[activeImageIndex] || images[0]}
-                alt={product.name}
-                className={styles.thumbnailImg}
-              />
+              {isVideoUrl(images[activeImageIndex] || images[0]) ? (
+                <>
+                  <video
+                    src={images[activeImageIndex] || images[0]}
+                    muted
+                    playsInline
+                    className={styles.thumbnailImg}
+                    style={{ objectFit: 'cover' }}
+                  />
+                  <div
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      background: 'rgba(0,0,0,0.3)',
+                      color: '#fff',
+                      fontSize: 16,
+                    }}
+                  >
+                    ▶
+                  </div>
+                </>
+              ) : (
+                <img
+                  src={images[activeImageIndex] || images[0]}
+                  alt={product.name}
+                  className={styles.thumbnailImg}
+                />
+              )}
               {discountPercent && (
                 <span className={styles.thumbnailBadge}>-{discountPercent}%</span>
               )}
@@ -568,11 +602,22 @@ export default function ProductDetailModal({
             className={styles.lightboxContent}
             onClick={(e) => e.stopPropagation()}
           >
-            <img
-              src={images[activeImageIndex] || images[0]}
-              alt={product.name}
-              className={styles.lightboxImg}
-            />
+            {isVideoUrl(images[activeImageIndex] || images[0]) ? (
+              <video
+                src={images[activeImageIndex] || images[0]}
+                controls
+                autoPlay
+                playsInline
+                className={styles.lightboxImg}
+                style={{ maxHeight: '90vh', maxWidth: '90vw' }}
+              />
+            ) : (
+              <img
+                src={images[activeImageIndex] || images[0]}
+                alt={product.name}
+                className={styles.lightboxImg}
+              />
+            )}
 
             {images.length > 1 && (
               <>

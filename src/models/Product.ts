@@ -29,6 +29,7 @@ export interface IProduct extends Document {
   maxPrice?: number;
   category: mongoose.Types.ObjectId;
   images: string[];
+  video?: string;
   stock: number;
   soldCount: number;
   rating?: number;
@@ -76,6 +77,7 @@ const ProductSchema = new Schema<IProduct>(
     maxPrice: { type: Number, default: 0, index: true },
     category: { type: Schema.Types.ObjectId, ref: 'Category', required: true, index: true },
     images: [{ type: String }],
+    video: { type: String, default: '' },
     stock: { type: Number, default: 0, min: 0 },
     soldCount: { type: Number, default: 0, min: 0 },
     rating: { type: Number, default: 5, min: 1, max: 5 },

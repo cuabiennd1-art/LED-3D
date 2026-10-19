@@ -32,7 +32,7 @@ import {
 } from 'react-icons/fi';
 import ZaloIcon from '@/components/ui/ZaloIcon';
 import toast from 'react-hot-toast';
-import { formatPrice, sanitizeAndTransformRichDescription } from '@/lib/utils';
+import { formatPrice, sanitizeAndTransformRichDescription, isVideoUrl } from '@/lib/utils';
 import { useCart } from '@/contexts/CartContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useCustomerAuth } from '@/contexts/CustomerAuthContext';
@@ -731,10 +731,18 @@ export default function ProductDetailPage() {
   const isOutOfStock = currentStock <= 0;
   const isProductOutOfStock = totalStock <= 0;
 
-  const images =
-    product?.images && product.images.length > 0
-      ? product.images
+  const images: string[] = useMemo(() => {
+    let list: string[] = [];
+    if (product?.images && Array.isArray(product.images) && product.images.length > 0) {
+      list = [...product.images];
+    }
+    if (product?.video && !list.includes(product.video)) {
+      list.push(product.video);
+    }
+    return list.length > 0
+      ? list
       : ['https://images.unsplash.com/photo-1581655353564-df123a1eb820?w=600'];
+  }, [product?.images, product?.video]);
 
   // Auto adjust quantity when selected variant's stock changes
   useEffect(() => {
@@ -903,16 +911,26 @@ export default function ProductDetailPage() {
     setActiveImageIndex((prev) => (prev + 1) % images.length);
   };
 
-  // Tự động chuyển cuộn ảnh chính sản phẩm sau 3 giây
+  // Khi video phát hết -> tự động chuyển sang ảnh hoặc video tiếp theo
+  const handleVideoEnded = () => {
+    if (images && images.length > 1) {
+      setActiveImageIndex((prev) => (prev + 1) % images.length);
+    }
+  };
+
+  // Tự động chuyển đổi ảnh chính sản phẩm sau 3 giây (đối với ảnh)
+  // Nếu là video thì video phải chạy hết mới nảy sang ảnh hoặc video tiếp theo (qua sự kiện onEnded)
   useEffect(() => {
     if (!images || images.length <= 1 || isGalleryPaused) return;
+    const currentMedia = images[activeImageIndex];
+    if (isVideoUrl(currentMedia)) return; // Không dùng timer cho video, chờ video chạy hết
 
-    const timer = setInterval(() => {
+    const timer = setTimeout(() => {
       setActiveImageIndex((prev) => (prev + 1) % images.length);
     }, 3000);
 
-    return () => clearInterval(timer);
-  }, [images, isGalleryPaused]);
+    return () => clearTimeout(timer);
+  }, [images, isGalleryPaused, activeImageIndex]);
 
   const handleOpenExpandModal = (tab: 'desc' | 'reviews') => {
     setExpandModalTab(tab);
@@ -1214,14 +1232,44 @@ export default function ProductDetailPage() {
               setTimeout(() => setIsGalleryPaused(false), 2500);
             }}
           >
-            <img
-              src={images[activeImageIndex] || images[0]}
-              alt={product.name}
-              className={styles.mobileMainImage}
-              onClick={() => setLightboxImage(images[activeImageIndex] || images[0])}
-              style={{ cursor: 'pointer' }}
-              title="Bấm để xem ảnh to full màn hình"
-            />
+            {isVideoUrl(images[activeImageIndex] || images[0]) ? (
+              <div style={{ width: '100%', height: '100%', position: 'relative', background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <video
+                  key={images[activeImageIndex] || images[0]}
+                  src={images[activeImageIndex] || images[0]}
+                  controls
+                  playsInline
+                  autoPlay
+                  muted
+                  preload="auto"
+                  ref={(el) => {
+                    if (el) {
+                      el.muted = true;
+                      el.defaultMuted = true;
+                      el.play().catch(() => {});
+                    }
+                  }}
+                  onCanPlay={(e) => {
+                    e.currentTarget.muted = true;
+                    e.currentTarget.play().catch(() => {});
+                  }}
+                  loop={images.length <= 1}
+                  onEnded={handleVideoEnded}
+                  onError={handleVideoEnded}
+                  className={styles.mobileMainImage}
+                  style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                />
+              </div>
+            ) : (
+              <img
+                src={images[activeImageIndex] || images[0]}
+                alt={product.name}
+                className={styles.mobileMainImage}
+                onClick={() => setLightboxImage(images[activeImageIndex] || images[0])}
+                style={{ cursor: 'pointer' }}
+                title="Bấm để xem ảnh to full màn hình"
+              />
+            )}
             {images.length > 1 && (
               <>
                 <button
@@ -1744,14 +1792,44 @@ export default function ProductDetailPage() {
               onMouseEnter={() => setIsGalleryPaused(true)}
               onMouseLeave={() => setIsGalleryPaused(false)}
             >
-              <img
-                src={images[activeImageIndex] || images[0]}
-                alt={product.name}
-                className={styles.pcMainImage}
-                onClick={() => setLightboxImage(images[activeImageIndex] || images[0])}
-                style={{ cursor: 'pointer' }}
-                title="Bấm để xem ảnh to full màn hình"
-              />
+              {isVideoUrl(images[activeImageIndex] || images[0]) ? (
+                <div style={{ width: '100%', height: '100%', position: 'relative', background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <video
+                    key={images[activeImageIndex] || images[0]}
+                    src={images[activeImageIndex] || images[0]}
+                    controls
+                    playsInline
+                    autoPlay
+                    muted
+                    preload="auto"
+                    ref={(el) => {
+                      if (el) {
+                        el.muted = true;
+                        el.defaultMuted = true;
+                        el.play().catch(() => {});
+                      }
+                    }}
+                    onCanPlay={(e) => {
+                      e.currentTarget.muted = true;
+                      e.currentTarget.play().catch(() => {});
+                    }}
+                    loop={images.length <= 1}
+                    onEnded={handleVideoEnded}
+                    onError={handleVideoEnded}
+                    className={styles.pcMainImage}
+                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                  />
+                </div>
+              ) : (
+                <img
+                  src={images[activeImageIndex] || images[0]}
+                  alt={product.name}
+                  className={styles.pcMainImage}
+                  onClick={() => setLightboxImage(images[activeImageIndex] || images[0])}
+                  style={{ cursor: 'pointer' }}
+                  title="Bấm để xem ảnh to full màn hình"
+                />
+              )}
 
               <div className={styles.badgeOverlay}>
                 <span className={styles.mallBadge}>MALL</span>
@@ -1800,17 +1878,42 @@ export default function ProductDetailPage() {
 
             {images.length > 1 && (
               <div className={styles.pcThumbnailsReel}>
-                {images.map((imgUrl: string, idx: number) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    className={`${styles.thumbnailBtn} ${activeImageIndex === idx ? styles.activeThumbnail : ''}`}
-                    onClick={() => setActiveImageIndex(idx)}
-                    onMouseEnter={() => setActiveImageIndex(idx)}
-                  >
-                    <img src={imgUrl} alt={`Thumb ${idx + 1}`} className={styles.thumbImg} />
-                  </button>
-                ))}
+                {images.map((imgUrl: string, idx: number) => {
+                  const isVid = isVideoUrl(imgUrl);
+                  return (
+                    <button
+                      key={idx}
+                      type="button"
+                      className={`${styles.thumbnailBtn} ${activeImageIndex === idx ? styles.activeThumbnail : ''}`}
+                      onClick={() => setActiveImageIndex(idx)}
+                      onMouseEnter={() => setActiveImageIndex(idx)}
+                      style={{ position: 'relative' }}
+                    >
+                      {isVid ? (
+                        <>
+                          <video src={imgUrl} className={styles.thumbImg} muted preload="metadata" />
+                          <span
+                            style={{
+                              position: 'absolute',
+                              inset: 0,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              background: 'rgba(0,0,0,0.4)',
+                              color: '#fff',
+                              fontSize: 14,
+                              borderRadius: 6,
+                            }}
+                          >
+                            ▶
+                          </span>
+                        </>
+                      ) : (
+                        <img src={imgUrl} alt={`Thumb ${idx + 1}`} className={styles.thumbImg} />
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             )}
 
@@ -2666,7 +2769,19 @@ export default function ProductDetailPage() {
           >
             ✕
           </button>
-          <img src={lightboxImage} alt="Ảnh phóng to" className={styles.lightboxImg} />
+          {isVideoUrl(lightboxImage) ? (
+            <video
+              src={lightboxImage}
+              controls
+              autoPlay
+              playsInline
+              className={styles.lightboxImg}
+              onClick={(e) => e.stopPropagation()}
+              style={{ maxHeight: '90vh', maxWidth: '90vw' }}
+            />
+          ) : (
+            <img src={lightboxImage} alt="Ảnh phóng to" className={styles.lightboxImg} />
+          )}
         </div>
       )}
 

@@ -159,3 +159,40 @@ export function sanitizeAndTransformRichDescription(html?: string | null): strin
 
   return transformed;
 }
+
+/**
+ * Kiểm tra xem một URL có phải là video (mp4, webm, mov, ogg, youtube, tiktok, v.v.) hay không
+ */
+export function isVideoUrl(url?: string | null): boolean {
+  if (!url || typeof url !== 'string') return false;
+  const clean = url.trim().split('?')[0].split('#')[0].toLowerCase();
+  if (
+    clean.endsWith('.mp4') ||
+    clean.endsWith('.webm') ||
+    clean.endsWith('.ogg') ||
+    clean.endsWith('.mov') ||
+    clean.endsWith('.m4v') ||
+    clean.endsWith('.mkv') ||
+    url.startsWith('data:video/')
+  ) {
+    return true;
+  }
+  // Video streams / embed providers
+  if (
+    url.includes('youtube.com') ||
+    url.includes('youtu.be') ||
+    url.includes('tiktok.com')
+  ) {
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Lấy YouTube embed URL nếu là link YouTube
+ */
+export function getYouTubeEmbedUrl(url: string): string | null {
+  if (!url) return null;
+  const ytMatch = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([\w-]{11})/);
+  return ytMatch ? `https://www.youtube.com/embed/${ytMatch[1]}` : null;
+}
