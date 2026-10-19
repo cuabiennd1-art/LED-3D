@@ -59,6 +59,8 @@ export default function ProductEditModal({
     isFeatured: false,
     status: 'active' as 'active' | 'hidden',
     description: '',
+    hasGift: false,
+    giftText: '',
   });
 
   const [images, setImages] = useState<string[]>([]);
@@ -126,6 +128,8 @@ export default function ProductEditModal({
             isFeatured: !!prod.isFeatured,
             status: prod.status || 'active',
             description: prod.description || '',
+            hasGift: !!prod.hasGift,
+            giftText: prod.giftText || '',
           });
           const prodImages = prod.images && prod.images.length > 0 ? [...prod.images] : [];
           if (prod.video && !prodImages.includes(prod.video)) {
@@ -521,6 +525,8 @@ export default function ProductEditModal({
       isFeatured: formData.isFeatured,
       status: formData.status,
       description: formData.description.trim(),
+      hasGift: !!formData.hasGift,
+      giftText: formData.giftText?.trim() || '',
       options: options.filter((opt) => opt.name?.trim() && opt.values.length > 0),
       variants: preparedVariants,
     };
@@ -1098,6 +1104,39 @@ export default function ProductEditModal({
                 onChange={(val) => setFormData({ ...formData, description: val })}
                 placeholder="Nhập mô tả chi tiết, chèn hình ảnh hoặc tải video xen kẽ giữa các đoạn văn..."
               />
+            </div>
+
+            {/* Row 5.5: Gift Offer Section */}
+            <div className={styles.giftSection}>
+              <div className={styles.giftHeader}>
+                <label className={styles.giftToggleLabel}>
+                  <input
+                    type="checkbox"
+                    className={styles.checkbox}
+                    checked={formData.hasGift}
+                    onChange={(e) => setFormData({ ...formData, hasGift: e.target.checked })}
+                  />
+                  <span>🎁 Kèm quà tặng cho sản phẩm này (Có / Không)</span>
+                </label>
+                {formData.hasGift && (
+                  <span className={styles.giftBadgeSmall}>ĐANG BẬT QUÀ TẶNG</span>
+                )}
+              </div>
+
+              {formData.hasGift && (
+                <div style={{ marginTop: 4 }}>
+                  <label className={styles.label} style={{ fontSize: '0.8rem', marginBottom: 4 }}>
+                    Nội dung quà tặng (Hiển thị tại trang sản phẩm & popup mua hàng)
+                  </label>
+                  <input
+                    type="text"
+                    className={styles.input}
+                    placeholder="VD: Tặng 1 điều khiển flash từ xa trị giá 500K..."
+                    value={formData.giftText}
+                    onChange={(e) => setFormData({ ...formData, giftText: e.target.value })}
+                  />
+                </div>
+              )}
             </div>
 
             {/* Row 6: Toggles */}

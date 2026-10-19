@@ -44,6 +44,8 @@ export interface IProduct extends Document {
   status: 'active' | 'hidden';
   options?: IProductOption[];
   variants: IVariant[];
+  hasGift?: boolean;
+  giftText?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -92,6 +94,8 @@ const ProductSchema = new Schema<IProduct>(
     status: { type: String, enum: ['active', 'hidden'], default: 'active', index: true },
     options: { type: [ProductOptionSchema], default: [] },
     variants: { type: [VariantSchema], default: [] },
+    hasGift: { type: Boolean, default: false },
+    giftText: { type: String, default: '', trim: true },
   },
   { timestamps: true, toJSON: { getters: true }, toObject: { getters: true } }
 );

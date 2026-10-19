@@ -175,6 +175,78 @@
   word-break: break-word;
 }
 
+/* Gift Section in Modal */
+.modalGiftRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--text-main, #0f172a);
+}
+
+.modalGiftBadge {
+  background: linear-gradient(135deg, #ff3b30 0%, #ee4d2d 100%);
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 1.5px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.3px;
+  flex-shrink: 0;
+}
+
+.modalGiftText {
+  color: #ef4444;
+  font-weight: 700;
+  word-break: break-word;
+}
+
+.modalGiftBox {
+  background: linear-gradient(135deg, rgba(238, 77, 45, 0.08) 0%, rgba(255, 59, 48, 0.03) 100%);
+  border: 1px dashed var(--primary, #ee4d2d);
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+
+.modalGiftHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.modalGiftTag {
+  color: var(--primary, #ee4d2d);
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.modalGiftFree {
+  background: #22c55e;
+  color: #ffffff;
+  font-size: 9.5px;
+  font-weight: 800;
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+
+.modalGiftDesc {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text-main, #0f172a);
+  line-height: 1.4;
+  margin: 0;
+  word-break: break-word;
+}
+
 .closeBtn {
   position: absolute;
   top: 12px;

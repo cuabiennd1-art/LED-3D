@@ -133,7 +133,7 @@ export default function ProductDetailPage() {
     if (vid.paused) {
       vid.play()
         .then(() => setIsVideoPlaying(true))
-        .catch(() => {});
+        .catch(() => { });
     } else {
       vid.pause();
       setIsVideoPlaying(false);
@@ -156,7 +156,7 @@ export default function ProductDetailPage() {
         .catch(() => {
           vid.muted = true;
           setIsVideoMuted(true);
-          vid.play().catch(() => {});
+          vid.play().catch(() => { });
         });
     }
   };
@@ -561,14 +561,14 @@ export default function ProductDetailPage() {
       if (saved) {
         expireTime = parseInt(saved, 10);
       }
-    } catch (e) {}
+    } catch (e) { }
 
     const now = Date.now();
     if (!expireTime || expireTime <= now) {
       expireTime = now + totalSecs * 1000;
       try {
         sessionStorage.setItem(storageKey, String(expireTime));
-      } catch (e) {}
+      } catch (e) { }
     }
 
     const initialRemaining = Math.max(0, Math.round((expireTime - now) / 1000));
@@ -583,7 +583,7 @@ export default function ProductDetailPage() {
         expireTime = Date.now() + loopMins * 60 * 1000;
         try {
           sessionStorage.setItem(storageKey, String(expireTime));
-        } catch (e) {}
+        } catch (e) { }
         setProductReservationTotalSeconds(loopMins * 60);
         setProductReservationSeconds(loopMins * 60);
       } else {
@@ -993,22 +993,22 @@ export default function ProductDetailPage() {
 
     const variantToSend = matchedVariant
       ? {
-          ...matchedVariant,
-          price: originalPrice || matchedVariant.price,
-          salePrice: currentPrice,
-          flashPrice: isFlashLive ? currentPrice : undefined,
-        }
+        ...matchedVariant,
+        price: originalPrice || matchedVariant.price,
+        salePrice: currentPrice,
+        flashPrice: isFlashLive ? currentPrice : undefined,
+      }
       : undefined;
 
     const prodWithFlash = isFlashLive
       ? {
-          ...product,
-          price: originalPrice || product.price,
-          salePrice: currentPrice,
-          flashPrice: currentPrice,
-          isFlashSale: true,
-          discountPercent: flashDiscountPercent || product.discountPercent,
-        }
+        ...product,
+        price: originalPrice || product.price,
+        salePrice: currentPrice,
+        flashPrice: currentPrice,
+        isFlashSale: true,
+        discountPercent: flashDiscountPercent || product.discountPercent,
+      }
       : product;
 
     addToCart(prodWithFlash, quantity, variantToSend);
@@ -1036,22 +1036,22 @@ export default function ProductDetailPage() {
 
     const variantToSend = matchedVariant
       ? {
-          ...matchedVariant,
-          price: originalPrice || matchedVariant.price,
-          salePrice: currentPrice,
-          flashPrice: isFlashLive ? currentPrice : undefined,
-        }
+        ...matchedVariant,
+        price: originalPrice || matchedVariant.price,
+        salePrice: currentPrice,
+        flashPrice: isFlashLive ? currentPrice : undefined,
+      }
       : undefined;
 
     const prodWithFlash = isFlashLive
       ? {
-          ...product,
-          price: originalPrice || product.price,
-          salePrice: currentPrice,
-          flashPrice: currentPrice,
-          isFlashSale: true,
-          discountPercent: flashDiscountPercent || product.discountPercent,
-        }
+        ...product,
+        price: originalPrice || product.price,
+        salePrice: currentPrice,
+        flashPrice: currentPrice,
+        isFlashSale: true,
+        discountPercent: flashDiscountPercent || product.discountPercent,
+      }
       : product;
 
     buyNow(prodWithFlash, quantity, variantToSend);
@@ -1215,7 +1215,7 @@ export default function ProductDetailPage() {
         if (video.paused) {
           video.play().then(() => {
             if (playOverlay) playOverlay.style.display = 'none';
-          }).catch(() => {});
+          }).catch(() => { });
         } else {
           video.pause();
           if (playOverlay) playOverlay.style.display = 'flex';
@@ -1275,7 +1275,7 @@ export default function ProductDetailPage() {
               video.muted = true;
               video.play().then(() => {
                 if (playOverlay) playOverlay.style.display = 'none';
-              }).catch(() => {});
+              }).catch(() => { });
             });
           }
         } else if (!isVisible && wasVisible) {
@@ -1364,7 +1364,7 @@ export default function ProductDetailPage() {
                   video.muted = true;
                   video.play().then(() => {
                     if (playOverlay) playOverlay.style.display = 'none';
-                  }).catch(() => {});
+                  }).catch(() => { });
                 });
               }
             } else if (!isVisible && wasVisible) {
@@ -1830,6 +1830,19 @@ export default function ProductDetailPage() {
                 )}
               </span>
             </div>
+
+            {/* Gift Offer Banner (Quà tặng kèm theo) */}
+            {product?.hasGift && (
+              <div className={styles.productGiftOfferBanner}>
+                <div className={styles.productGiftOfferHeader}>
+                  <span className={styles.productGiftOfferTag}>🎁 QUÀ TẶNG KÈM</span>
+                </div>
+                <div className={styles.productGiftOfferContent}>
+                  <span className={styles.productGiftOfferSparkle}>👉</span>
+                  <span>{product.giftText || 'Tặng kèm phụ kiện đặc biệt khi đặt mua sản phẩm này!'}</span>
+                </div>
+              </div>
+            )}
 
             {/* FOMO Notice */}
             {fomoSettings && fomoSettings.enableViewerCount === true && (
@@ -2629,6 +2642,19 @@ export default function ProductDetailPage() {
                   </>
                 )}
               </div>
+
+              {/* Gift Offer Banner Desktop (Quà tặng kèm theo) */}
+              {product?.hasGift && (
+                <div className={styles.productGiftOfferBanner}>
+                  <div className={styles.productGiftOfferHeader}>
+                    <span className={styles.productGiftOfferTag}>🎁 QUÀ TẶNG KÈM</span>
+                  </div>
+                  <div className={styles.productGiftOfferContent}>
+                    <span className={styles.productGiftOfferSparkle}>👉</span>
+                    <span>{product.giftText || 'Tặng kèm phụ kiện đặc biệt khi đặt mua sản phẩm này!'}</span>
+                  </div>
+                </div>
+              )}
 
               {fomoSettings && fomoSettings.enableViewerCount === true && (
                 <div className={styles.viewerCountNotice}>
@@ -3442,13 +3468,13 @@ export default function ProductDetailPage() {
           product={
             isFlashLive
               ? {
-                  ...product,
-                  flashPrice: currentPrice,
-                  isFlashSale: true,
-                  discountPercent: flashDiscountPercent || product.discountPercent,
-                  flashPercent: flashPercentVal,
-                  variants: product.variants,
-                }
+                ...product,
+                flashPrice: currentPrice,
+                isFlashSale: true,
+                discountPercent: flashDiscountPercent || product.discountPercent,
+                flashPercent: flashPercentVal,
+                variants: product.variants,
+              }
               : product
           }
           initialAttributes={selectedAttributes}

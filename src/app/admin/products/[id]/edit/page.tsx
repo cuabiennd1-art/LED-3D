@@ -46,6 +46,8 @@ export default function EditProductPage() {
     description: '',
     isFeatured: false,
     status: 'active',
+    hasGift: false,
+    giftText: '',
     variants: [] as { color?: string; size?: string; price?: number; salePrice?: number; stock?: number }[],
   });
 
@@ -76,6 +78,8 @@ export default function EditProductPage() {
             description: p.description || '',
             isFeatured: p.isFeatured || false,
             status: p.status || 'active',
+            hasGift: !!p.hasGift,
+            giftText: p.giftText || '',
             variants: p.variants || [],
           });
         }
@@ -377,6 +381,32 @@ export default function EditProductPage() {
                 Sản phẩm nổi bật (Trang chủ)
               </label>
             </div>
+          </div>
+
+          <div className={styles.card}>
+            <h3>🎁 Quà tặng kèm theo</h3>
+            <div className={styles.formGroup}>
+              <label className={styles.checkboxLabel}>
+                <input
+                  type="checkbox"
+                  checked={form.hasGift}
+                  onChange={(e) => setForm({ ...form, hasGift: e.target.checked })}
+                />
+                Kèm quà tặng cho sản phẩm này
+              </label>
+            </div>
+            {form.hasGift && (
+              <div className={styles.formGroup}>
+                <label>Nội dung quà tặng</label>
+                <input
+                  type="text"
+                  className={styles.input}
+                  placeholder="VD: Tặng 1 điều khiển flash từ xa trị giá 500K..."
+                  value={form.giftText}
+                  onChange={(e) => setForm({ ...form, giftText: e.target.value })}
+                />
+              </div>
+            )}
           </div>
 
           <div className={styles.card}>

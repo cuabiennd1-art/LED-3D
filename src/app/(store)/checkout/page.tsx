@@ -605,6 +605,11 @@ export default function CheckoutPage() {
                   {i.variant?.name && (
                     <span className={styles.orderItemVariant}>Phân loại: {i.variant.name}</span>
                   )}
+                  {i.hasGift && (
+                    <span style={{ fontSize: 11.5, color: '#ef4444', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+                      🎁 Quà tặng: {i.giftText || 'Kèm quà tặng đặc biệt'}
+                    </span>
+                  )}
                   <div className={styles.orderItemPriceRow}>
                     <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
                       <span className={styles.orderItemPrice}>

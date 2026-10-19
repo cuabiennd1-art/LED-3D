@@ -26,6 +26,8 @@ export interface CartItem {
     salePrice?: number;
     stock?: number;
   };
+  hasGift?: boolean;
+  giftText?: string;
   selected?: boolean;
 }
 
@@ -226,6 +228,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           stock: availableStock,
           image: variant?.image || getProductCoverImage(product, '/file.svg'),
           variant: variant ? { ...variant, name: variantName, price: originalPrice, salePrice: effectivePrice, stock: availableStock } : undefined,
+          hasGift: product.hasGift,
+          giftText: product.giftText,
           selected: true,
         };
         return [...prevItems, newItem];
@@ -304,6 +308,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       stock: availableStock,
       image: variant?.image || getProductCoverImage(product, '/file.svg'),
       variant: variant ? { ...variant, name: variantName, price: originalPrice, salePrice: effectivePrice, stock: availableStock } : undefined,
+      hasGift: product.hasGift,
+      giftText: product.giftText,
       selected: true,
     };
 
