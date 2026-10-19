@@ -486,6 +486,7 @@ export default function ProductDetailModal({
   // Selected label summary
   const selectedValuesList = Object.values(selectedAttributes).filter(Boolean);
   const selectedSummary = selectedValuesList.length > 0 ? selectedValuesList.join(', ') : '';
+  const productTitle = product?.name || product?.title || product?.productName || '';
 
   return (
     <>
@@ -529,7 +530,7 @@ export default function ProductDetailModal({
               ) : (
                 <img
                   src={images[activeImageIndex] || images[0]}
-                  alt={product.name}
+                  alt={productTitle}
                   className={styles.thumbnailImg}
                 />
               )}
@@ -542,6 +543,12 @@ export default function ProductDetailModal({
             </div>
 
           <div className={styles.headerInfo}>
+            {productTitle && (
+              <h3 className={styles.productTitle} title={productTitle}>
+                {productTitle}
+              </h3>
+            )}
+
             <div className={styles.priceRow}>
               <span className={`${styles.currentPrice} ${isFlash ? styles.flashCurrentPrice : ''}`}>
                 {displayPriceText}
@@ -558,7 +565,7 @@ export default function ProductDetailModal({
               {isOutOfStock ? (
                 <span className={styles.outOfStockText}>Tạm hết hàng</span>
               ) : (
-                <span>Kho: <strong style={{ color: 'var(--text-main, #fff)' }}>{currentStock}</strong></span>
+                <span>Kho: <strong style={{ color: 'var(--text-main, #0f172a)' }}>{currentStock}</strong></span>
               )}
             </div>
 
@@ -578,8 +585,6 @@ export default function ProductDetailModal({
 
         {/* ===== 2. SCROLLABLE OPTIONS BODY ===== */}
         <div className={styles.scrollBody}>
-          <h3 className={styles.productTitle}>{product.name}</h3>
-
           {/* DYNAMIC MULTI-DIMENSIONAL OPTIONS */}
           {options.map((opt) => {
             const normOpt = normalizeAttrString(opt.name);
