@@ -1,4 +1,8 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
+import Category from './Category';
+
+// Ensure Category model is referenced so bundler always registers it in Mongoose
+void Category;
 
 export interface IProductOption {
   name: string;

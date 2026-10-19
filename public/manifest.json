@@ -22,7 +22,7 @@
   "protocol_handlers": [
     {
       "protocol": "web+shopbig",
-      "url": "/admin?source=pwa"
+      "url": "/admin?source=pwa&url=%s"
     }
   ],
   "categories": ["shopping", "lifestyle"],
