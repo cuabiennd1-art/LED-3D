@@ -1056,12 +1056,19 @@ export default function ProductDetailPage() {
     setActiveImageIndex((prev) => (prev + 1) % images.length);
   };
 
+  // Khi video phát hết -> tự động chuyển sang ảnh hoặc video tiếp theo
+  const handleVideoEnded = () => {
+    if (images && images.length > 1) {
+      setActiveImageIndex((prev) => (prev + 1) % images.length);
+    }
+  };
+
   // Tự động chuyển đổi ảnh chính sản phẩm sau 3 giây (đối với ảnh)
-  // Nếu là video thì không dùng timer tự động nhảy để khách xem và nghe trọn vẹn
+  // Nếu là video thì chờ video phát hết mới nhảy sang ảnh hoặc video tiếp theo (qua onEnded)
   useEffect(() => {
     if (!images || images.length <= 1 || isGalleryPaused) return;
     const currentMedia = images[activeImageIndex];
-    if (isVideoUrl(currentMedia)) return; // Không dùng timer cho video
+    if (isVideoUrl(currentMedia)) return; // Không dùng timer cho video, chờ video phát hết
 
     const timer = setTimeout(() => {
       setActiveImageIndex((prev) => (prev + 1) % images.length);
@@ -1528,7 +1535,8 @@ export default function ProductDetailPage() {
                   onPlay={() => setIsVideoPlaying(true)}
                   onPause={() => setIsVideoPlaying(false)}
                   onTimeUpdate={(e) => handleVideoTimeUpdate(e, true)}
-                  loop
+                  onEnded={handleVideoEnded}
+                  loop={images.length <= 1}
                   className={styles.mobileMainImage}
                   style={{ width: '100%', height: '100%', objectFit: 'contain', pointerEvents: 'none' }}
                 />
@@ -2213,7 +2221,8 @@ export default function ProductDetailPage() {
                     onPlay={() => setIsVideoPlaying(true)}
                     onPause={() => setIsVideoPlaying(false)}
                     onTimeUpdate={(e) => handleVideoTimeUpdate(e, false)}
-                    loop
+                    onEnded={handleVideoEnded}
+                    loop={images.length <= 1}
                     className={styles.pcMainImage}
                     style={{ width: '100%', height: '100%', objectFit: 'contain', pointerEvents: 'none' }}
                   />
