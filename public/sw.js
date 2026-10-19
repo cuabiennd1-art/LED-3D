@@ -1,8 +1,10 @@
-// ShopBig PWA Service Worker
-const CACHE_NAME = 'shopbig-pwa-v1';
+// LED 3D PWA Service Worker
+const CACHE_NAME = 'led3d-pwa-v2';
 const PRECACHE_ASSETS = [
   '/',
   '/demo',
+  '/favicon.ico',
+  '/favicon-32x32.png',
   '/icon-192.png',
   '/icon-512.png',
   '/icon-maskable.png',

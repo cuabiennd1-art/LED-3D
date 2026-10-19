@@ -1,62 +1,31 @@
 {
-  "name": "ShopBig - Mua Sắm Vô Hạn",
-  "short_name": "ShopBig",
-  "description": "Trải nghiệm mua sắm trực tuyến cao cấp, giao hàng nhanh chóng toàn quốc.",
-  "start_url": "/demo",
-  "id": "/demo",
+  "name": "Minh Phương Công Nghệ - LED 3D",
+  "short_name": "Minh Phương",
+  "description": "Thế giới đèn LED & Decor 3D cao cấp",
+  "start_url": "/",
+  "id": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait-primary",
   "background_color": "#090a0f",
-  "theme_color": "#ee4d2d",
+  "theme_color": "#3b82f6",
   "prefer_related_applications": false,
-  "related_applications": [
-    {
-      "platform": "webapp",
-      "url": "/manifest.json"
-    }
-  ],
-  "launch_handler": {
-    "client_mode": ["focus-existing", "navigate-new"]
-  },
-  "protocol_handlers": [
-    {
-      "protocol": "web+shopbig",
-      "url": "/admin?source=pwa&url=%s"
-    }
-  ],
   "categories": ["shopping", "lifestyle"],
-  "shortcuts": [
-    {
-      "name": "Quản Trị Hệ Thống",
-      "short_name": "Quản Trị",
-      "description": "Bảng điều khiển quản trị ShopBig",
-      "url": "/admin",
-      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
-    },
-    {
-      "name": "Cửa Hàng",
-      "short_name": "Cửa Hàng",
-      "description": "Xem giao diện cửa hàng ShopBig",
-      "url": "/demo",
-      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
-    }
-  ],
   "icons": [
     {
-      "src": "/icon-192.png",
+      "src": "/icon-192.png?v=2",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icon-512.png",
+      "src": "/icon-512.png?v=2",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icon-maskable.png",
+      "src": "/icon-maskable.png?v=2",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"

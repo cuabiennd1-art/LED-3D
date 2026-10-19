@@ -21,17 +21,25 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export async function generateMetadata(): Promise<Metadata> {
+  const defaultTitle = 'Minh Phương công nghệ - Thế Giới Đèn LED & Decor 3D';
+  const defaultDesc = 'Cửa hàng đèn LED 3D decor và công nghệ chiếu sáng thông minh';
+  const defaultLogoText = 'Minh Phương công nghệ';
+
   try {
     await connectToDatabase();
     const setting = await Setting.findOne({ key: 'theme_settings' }).lean();
     const themeConfig = (setting as any)?.value || {};
     const pageTitles = themeConfig?.pageTitles || {};
 
-    const title = pageTitles.siteTitle || 'Trải nghiệm mua sắm thời trang trực tuyến thời thượng,Miễn phí giao hàng nhanh chóng toàn quốc.';
-    const description = pageTitles.metaDescription || 'Trải nghiệm mua sắm trực tuyến cao cấp, giao hàng nhanh chóng toàn quốc.';
+    const title = pageTitles.siteTitle || defaultTitle;
+    const description = pageTitles.metaDescription || defaultDesc;
     const rawFavicon = pageTitles.faviconUrl?.trim();
     const rawLogo = pageTitles.logoUrl?.trim();
     const faviconUrl = rawFavicon || rawLogo || '/favicon.ico';
+    const logoText = pageTitles.logoText || defaultLogoText;
+
+    // Build icon URL with cache buster query string
+    const dynamicIconUrl = faviconUrl.includes('?') ? faviconUrl : `${faviconUrl}?v=2`;
 
     return {
       title,
@@ -39,35 +47,36 @@ export async function generateMetadata(): Promise<Metadata> {
       appleWebApp: {
         capable: true,
         statusBarStyle: 'black-translucent',
-        title: pageTitles.logoText || 'ShopBig',
+        title: logoText,
       },
       icons: {
         icon: [
-          { url: faviconUrl },
-          { url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
-          { url: '/icon-512.png', sizes: '512x512', type: 'image/png' },
+          { url: dynamicIconUrl },
+          { url: '/favicon-32x32.png?v=2', sizes: '32x32', type: 'image/png' },
+          { url: '/icon-192.png?v=2', sizes: '192x192', type: 'image/png' },
+          { url: '/icon-512.png?v=2', sizes: '512x512', type: 'image/png' },
         ],
-        shortcut: [faviconUrl],
-        apple: [{ url: '/apple-touch-icon.png', sizes: '180x180' }],
+        shortcut: [dynamicIconUrl],
+        apple: [{ url: '/apple-touch-icon.png?v=2', sizes: '180x180' }],
       },
     };
   } catch (error) {
     return {
-      title: 'Trải nghiệm mua sắm thời trang trực tuyến thời thượng,Miễn phí giao hàng nhanh chóng toàn quốc.',
-      description: 'Trải nghiệm mua sắm trực tuyến cao cấp, giao hàng nhanh chóng toàn quốc.',
+      title: defaultTitle,
+      description: defaultDesc,
       appleWebApp: {
         capable: true,
         statusBarStyle: 'black-translucent',
-        title: 'ShopBig',
+        title: defaultLogoText,
       },
       icons: {
         icon: [
-          { url: '/favicon.ico' },
-          { url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
-          { url: '/icon-512.png', sizes: '512x512', type: 'image/png' },
+          { url: '/favicon-32x32.png?v=2', sizes: '32x32', type: 'image/png' },
+          { url: '/icon-192.png?v=2', sizes: '192x192', type: 'image/png' },
+          { url: '/icon-512.png?v=2', sizes: '512x512', type: 'image/png' },
         ],
-        shortcut: ['/favicon.ico'],
-        apple: [{ url: '/apple-touch-icon.png', sizes: '180x180' }],
+        shortcut: ['/favicon.ico?v=2'],
+        apple: [{ url: '/apple-touch-icon.png?v=2', sizes: '180x180' }],
       },
     };
   }
@@ -82,14 +91,10 @@ export default function RootLayout({
     <html lang="vi" className={jakarta.variable}>
       <head>
         <link rel="manifest" href="/manifest.json" />
-        <meta name="theme-color" content="#ee4d2d" />
+        <meta name="theme-color" content="#3b82f6" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content="ShopBig" />
-        <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
-        <link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png" />
-        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <script
           dangerouslySetInnerHTML={{
             __html: `

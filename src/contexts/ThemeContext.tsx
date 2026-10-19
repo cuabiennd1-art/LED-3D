@@ -197,6 +197,7 @@ export function updateDocumentFavicon(rawUrl?: string) {
   if (!url) return;
 
   const validUrl = url.startsWith('http') || url.startsWith('/') || url.startsWith('data:') ? url : `/${url}`;
+  const cacheBustedUrl = validUrl.includes('?') ? validUrl : `${validUrl}?v=${Date.now()}`;
 
   try {
     // Determine MIME type
@@ -219,12 +220,15 @@ export function updateDocumentFavicon(rawUrl?: string) {
 
     if (existingIcons.length > 0) {
       existingIcons.forEach((link) => {
-        link.href = validUrl;
+        link.href = cacheBustedUrl;
         if (link.type) link.type = type;
+        if (link.hasAttribute('sizes') && !validUrl.includes('icon-192') && !validUrl.includes('icon-512')) {
+          link.removeAttribute('sizes');
+        }
       });
     }
 
-    // 2. Ensure our dedicated dynamic favicon link exists
+    // 2. Ensure dedicated dynamic favicon links exist
     let dynamicFavicon = document.getElementById('store-dynamic-favicon') as HTMLLinkElement | null;
     if (!dynamicFavicon) {
       dynamicFavicon = document.createElement('link');
@@ -233,7 +237,7 @@ export function updateDocumentFavicon(rawUrl?: string) {
       document.head.appendChild(dynamicFavicon);
     }
     dynamicFavicon.type = type;
-    dynamicFavicon.href = validUrl;
+    dynamicFavicon.href = cacheBustedUrl;
 
     let dynamicShortcut = document.getElementById('store-dynamic-shortcut') as HTMLLinkElement | null;
     if (!dynamicShortcut) {
@@ -243,7 +247,7 @@ export function updateDocumentFavicon(rawUrl?: string) {
       document.head.appendChild(dynamicShortcut);
     }
     dynamicShortcut.type = type;
-    dynamicShortcut.href = validUrl;
+    dynamicShortcut.href = cacheBustedUrl;
   } catch (err) {
     console.warn('Error updating document favicon:', err);
   }
@@ -371,59 +375,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const faviconToUse = rawFavicon || rawLogo;
 
     if (faviconToUse) {
-      try {
-        const existingIcons = document.querySelectorAll<HTMLLinkElement>(
-          "link[rel~='icon'], link[rel='shortcut icon'], link[rel='apple-touch-icon']"
-        );
-
-        let alreadyMatched = false;
-        if (existingIcons.length > 0) {
-          existingIcons.forEach((el) => {
-            const href = el.getAttribute('href');
-            if (href === faviconToUse) {
-              alreadyMatched = true;
-            }
-          });
-        }
-
-        if (!alreadyMatched) {
-          existingIcons.forEach((el) => el.remove());
-
-          let mimeType = 'image/x-icon';
-          if (faviconToUse.endsWith('.png') || faviconToUse.includes('.png')) {
-            mimeType = 'image/png';
-          } else if (faviconToUse.endsWith('.svg') || faviconToUse.includes('.svg')) {
-            mimeType = 'image/svg+xml';
-          } else if (
-            faviconToUse.endsWith('.jpg') ||
-            faviconToUse.endsWith('.jpeg') ||
-            faviconToUse.includes('.jpg') ||
-            faviconToUse.includes('.jpeg')
-          ) {
-            mimeType = 'image/jpeg';
-          } else if (faviconToUse.endsWith('.webp') || faviconToUse.includes('.webp')) {
-            mimeType = 'image/webp';
-          }
-
-          const link = document.createElement('link');
-          link.rel = 'icon';
-          link.type = mimeType;
-          link.href = faviconToUse;
-          document.head.appendChild(link);
-
-          const shortcutLink = document.createElement('link');
-          shortcutLink.rel = 'shortcut icon';
-          shortcutLink.href = faviconToUse;
-          document.head.appendChild(shortcutLink);
-
-          const appleLink = document.createElement('link');
-          appleLink.rel = 'apple-touch-icon';
-          appleLink.href = faviconToUse;
-          document.head.appendChild(appleLink);
-        }
-      } catch (iconErr) {
-        console.warn('Failed to update browser favicon:', iconErr);
-      }
+      updateDocumentFavicon(faviconToUse);
     }
 
     // Meta Description
