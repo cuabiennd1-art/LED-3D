@@ -9,6 +9,8 @@
   justify-content: center;
   padding: 20px;
   animation: fadeIn 0.2s ease;
+  overflow-x: hidden;
+  box-sizing: border-box;
 }
 
 .modal {
@@ -23,6 +25,7 @@
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
   animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   overflow: hidden;
+  box-sizing: border-box;
   transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
@@ -32,6 +35,8 @@
   align-items: center;
   padding: 20px 24px;
   border-bottom: 1px solid var(--border-color, #232838);
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .title {
@@ -66,9 +71,13 @@
 .body {
   padding: 24px;
   overflow-y: auto;
+  overflow-x: hidden;
   display: flex;
   flex-direction: column;
   gap: 20px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .grid2 {
@@ -225,6 +234,7 @@
 .imageInputs {
   display: flex;
   gap: 10px;
+  flex-wrap: wrap;
 }
 
 .uploadBtn {
@@ -457,6 +467,39 @@
   color: #ef4444;
 }
 
+/* Tag Input Row & Button */
+.tagInputRow {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.addTagBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background-color: var(--bg-card-hover, #1a1e2b);
+  color: var(--text-main, #ffffff);
+  border: 1px solid var(--border-color, #232838);
+  padding: 0 14px;
+  border-radius: var(--radius-md, 8px);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  height: 34px;
+  transition: all 0.2s;
+}
+
+.addTagBtn:hover {
+  color: var(--primary, #3b82f6);
+  border-color: var(--primary, #3b82f6);
+  background-color: color-mix(in srgb, var(--primary, #3b82f6) 10%, transparent);
+}
+
 /* Bulk Bar */
 .bulkBar {
   display: flex;
@@ -492,17 +535,21 @@
   color: var(--primary-text, #ffffff);
 }
 
-/* Table Matrix */
+/* Desktop Matrix Table (Shown on screens > 768px) */
+.desktopMatrixWrap,
 .matrixTableWrap {
   overflow-x: auto;
   border: 1px solid var(--border-color, #232838);
   border-radius: 8px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .matrixTable {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.8125rem;
+  min-width: 520px;
 }
 
 .matrixTable th {
@@ -524,6 +571,93 @@
 
 .matrixTable tr:last-child td {
   border-bottom: none;
+}
+
+/* Mobile Matrix Cards (Hidden on desktop, shown on <= 768px) */
+.mobileMatrixList {
+  display: none;
+}
+
+.mobileMatrixCard {
+  background-color: var(--bg-main, #090a0f);
+  border: 1px solid var(--border-color, #232838);
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  box-sizing: border-box;
+  transition: border-color 0.2s ease;
+}
+
+.mobileMatrixCard:focus-within {
+  border-color: rgba(59, 130, 246, 0.4);
+}
+
+.mobileMatrixHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.mobileMatrixTitleCol {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  flex: 1;
+}
+
+.mobileMatrixTitle {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--text-main, #f8fafc);
+  word-break: break-word;
+  line-height: 1.35;
+}
+
+.mobileMatrixAttrs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.mobileMatrixFields {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.mobileMatrixField {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.mobileFieldLabel {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted, #94a3b8);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.mobileMatrixGrid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .attributeBadge {
@@ -647,16 +781,6 @@
   }
 }
 
-@media (max-width: 640px) {
-  .grid2,
-  .grid3 {
-    grid-template-columns: 1fr;
-  }
-  .variantRow {
-    grid-template-columns: 1fr 1fr;
-  }
-}
-
 /* Gift Section */
 .giftSection {
   background: rgba(59, 130, 246, 0.05);
@@ -693,4 +817,254 @@
   border-radius: 4px;
   letter-spacing: 0.3px;
 }
+
+/* Comprehensive Mobile Responsiveness */
+@media (max-width: 768px) {
+  .overlay {
+    padding: 0;
+    align-items: flex-end;
+    overflow-x: hidden;
+  }
+
+  .modal {
+    max-height: 94vh;
+    border-radius: 16px 16px 0 0;
+    border-bottom: none;
+    max-width: 100%;
+    width: 100%;
+    overflow-x: hidden;
+  }
+
+  .header {
+    padding: 12px 14px;
+    gap: 8px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .title {
+    font-size: 1rem;
+    line-height: 1.35;
+    flex: 1;
+    min-width: 0;
+    word-break: break-word;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .closeBtn {
+    padding: 4px;
+    font-size: 1.15rem;
+    flex-shrink: 0;
+  }
+
+  .body {
+    padding: 14px 14px 18px;
+    gap: 14px;
+    overflow-x: hidden;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .grid2,
+  .grid3 {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .formGroup {
+    gap: 4px;
+  }
+
+  .label {
+    font-size: 0.8125rem;
+  }
+
+  .input,
+  .select,
+  .textarea {
+    font-size: 0.8125rem;
+    padding: 8px 10px;
+    border-radius: 6px;
+  }
+
+  .imageSection {
+    padding: 10px;
+    gap: 8px;
+  }
+
+  .imageList {
+    gap: 6px;
+  }
+
+  .imageItem {
+    width: 52px;
+    height: 52px;
+  }
+
+  .imageInputs {
+    flex-direction: column;
+    gap: 6px;
+    width: 100%;
+  }
+
+  .imageInputs input {
+    width: 100%;
+  }
+
+  .uploadBtn,
+  .uploadVideoBtn {
+    width: 100%;
+    justify-content: center;
+    height: 34px;
+    font-size: 0.75rem;
+    padding: 0 10px;
+  }
+
+  .variantSection {
+    padding: 10px;
+    gap: 10px;
+  }
+
+  .variantHeader {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .addVariantBtn,
+  .generateBtn {
+    width: 100%;
+    justify-content: center;
+    padding: 8px;
+    font-size: 0.78125rem;
+  }
+
+  .optionCard {
+    padding: 10px;
+    gap: 8px;
+  }
+
+  .optionCardHeader {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .optionCardHeader > div {
+    max-width: 100% !important;
+    width: 100%;
+  }
+
+  .tagInputRow {
+    flex-direction: column;
+    gap: 6px;
+    width: 100%;
+  }
+
+  .addTagBtn {
+    width: 100%;
+    justify-content: center;
+    height: 36px;
+  }
+
+  .suggestionChips {
+    gap: 4px;
+  }
+
+  .suggestionChip {
+    font-size: 0.6875rem;
+    padding: 2px 7px;
+  }
+
+  .tagBadge {
+    font-size: 0.75rem;
+    padding: 2px 8px;
+  }
+
+  .bulkBar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    padding: 8px 10px;
+  }
+
+  .bulkBar input {
+    width: 100% !important;
+  }
+
+  .bulkApplyBtn {
+    width: 100%;
+    justify-content: center;
+    padding: 8px;
+  }
+
+  /* Hide Desktop Matrix Table on Mobile */
+  .desktopMatrixWrap,
+  .matrixTableWrap {
+    display: none !important;
+  }
+
+  /* Show Fluid Mobile Matrix Cards (ZERO Horizontal Scroll) */
+  .mobileMatrixList {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .giftSection {
+    padding: 10px;
+    gap: 8px;
+  }
+
+  .giftHeader {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .giftToggleLabel {
+    font-size: 0.78125rem;
+  }
+
+  .checkboxRow {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .checkboxLabel {
+    font-size: 0.8125rem;
+  }
+
+  .footer {
+    padding: 10px 12px;
+    gap: 8px;
+  }
+
+  .cancelBtn,
+  .submitBtn {
+    flex: 1;
+    justify-content: center;
+    padding: 9px 12px;
+    font-size: 0.8125rem;
+  }
+}
+
+/* Desktop PC Optimization (>= 1024px) */
+@media (min-width: 1024px) {
+  .modal {
+    max-width: 1000px;
+    max-height: 88vh;
+  }
+
+  .matrixTable th,
+  .matrixTable td {
+    padding: 10px 14px;
+  }
+}
+
 

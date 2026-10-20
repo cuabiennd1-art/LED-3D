@@ -823,3 +823,40 @@
     opacity: 0.6;
   }
 }
+
+@media (max-width: 768px) {
+  .topBar {
+    padding: 6px 8px;
+  }
+
+  .tabBtn {
+    padding: 4px 8px;
+    font-size: 11px;
+  }
+
+  .helperText {
+    display: none;
+  }
+
+  .toolbar {
+    padding: 6px 8px;
+    gap: 3px;
+  }
+
+  .toolBtn {
+    width: 28px;
+    height: 28px;
+    font-size: 11px;
+  }
+
+  .divider {
+    height: 16px;
+    margin: 0 2px;
+  }
+
+  .editorArea {
+    padding: 10px;
+    font-size: 13px;
+    min-height: 140px;
+  }
+}

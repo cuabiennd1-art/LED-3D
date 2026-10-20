@@ -870,7 +870,7 @@ export default function ProductEditModal({
                         )}
                       </div>
 
-                      <div style={{ display: 'flex', gap: 8 }}>
+                      <div className={styles.tagInputRow}>
                         <input
                           type="text"
                           className={styles.input}
@@ -887,9 +887,8 @@ export default function ProductEditModal({
                         />
                         <button
                           type="button"
-                          className={styles.uploadBtn}
+                          className={styles.addTagBtn}
                           onClick={() => handleAddTagValue(optIdx)}
-                          style={{ height: 34 }}
                         >
                           <FiPlus /> Thêm giá trị
                         </button>
@@ -980,81 +979,194 @@ export default function ProductEditModal({
                   </div>
                 )}
 
-                {/* Matrix Table */}
+                {/* Matrix Table & Mobile Cards */}
                 {variants.length === 0 ? (
                   <p style={{ margin: 0, fontSize: '0.8125rem', color: 'var(--text-muted, #94a3b8)' }}>
                     Chưa có biến thể nào được tạo. Hãy bấm nút <strong>"Sinh Biến Thể Tự Động"</strong> ở trên hoặc thêm thủ công.
                   </p>
                 ) : (
-                  <div className={styles.matrixTableWrap}>
-                    <table className={styles.matrixTable}>
-                      <thead>
-                        <tr>
-                          <th>Tên phân loại / Biến thể</th>
-                          <th style={{ width: 140 }}>Mã SKU</th>
-                          <th style={{ width: 125 }}>Giá riêng (₫) *</th>
-                          <th style={{ width: 125 }}>Giá sale (₫)</th>
-                          <th style={{ width: 85 }}>Kho *</th>
-                          <th style={{ width: 40, textAlign: 'center' }}>Xóa</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {variants.map((v, idx) => (
-                          <tr key={idx}>
-                            <td>
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                                <strong style={{ color: 'var(--text-main, #f8fafc)' }}>{v.title || `Biến thể ${idx + 1}`}</strong>
-                                {v.attributes && (
-                                  <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                                    {Object.entries(v.attributes).map(([k, val]) => (
-                                      <span key={k} className={styles.attributeBadge}>
-                                        {k}: {val}
-                                      </span>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-                            </td>
-                            <td>
+                  <>
+                    {/* Desktop Matrix Table (>= 769px) */}
+                    <div className={styles.desktopMatrixWrap}>
+                      <table className={styles.matrixTable}>
+                        <thead>
+                          <tr>
+                            <th>Tên phân loại / Biến thể</th>
+                            <th style={{ width: 140 }}>Mã SKU</th>
+                            <th style={{ width: 125 }}>Giá riêng (₫) *</th>
+                            <th style={{ width: 125 }}>Giá sale (₫)</th>
+                            <th style={{ width: 85 }}>Kho *</th>
+                            <th style={{ width: 40, textAlign: 'center' }}>Xóa</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {variants.map((v, idx) => (
+                            <tr key={idx}>
+                              <td>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                                  <strong style={{ color: 'var(--text-main, #f8fafc)' }}>{v.title || `Biến thể ${idx + 1}`}</strong>
+                                  {v.attributes && (
+                                    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                                      {Object.entries(v.attributes).map(([k, val]) => (
+                                        <span key={k} className={styles.attributeBadge}>
+                                          {k}: {val}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              </td>
+                              <td>
+                                <input
+                                  type="text"
+                                  className={styles.input}
+                                  value={v.sku || ''}
+                                  onChange={(e) => handleUpdateVariantField(idx, 'sku', e.target.value)}
+                                  style={{ height: 32, fontSize: '0.775rem', fontFamily: 'monospace' }}
+                                />
+                              </td>
+                              <td>
+                                <input
+                                  type="text"
+                                  inputMode="numeric"
+                                  className={styles.input}
+                                  placeholder="Giá bán"
+                                  value={formatWithDots(v.price)}
+                                  onChange={(e) =>
+                                    handleUpdateVariantField(idx, 'price', parseFromDots(e.target.value))
+                                  }
+                                  style={{ height: 32, fontSize: '0.775rem', fontWeight: 600, color: '#60a5fa' }}
+                                />
+                              </td>
+                              <td>
+                                <input
+                                  type="text"
+                                  inputMode="numeric"
+                                  className={styles.input}
+                                  placeholder="Giá sale"
+                                  value={formatWithDots(v.salePrice)}
+                                  onChange={(e) =>
+                                    handleUpdateVariantField(
+                                      idx,
+                                      'salePrice',
+                                      e.target.value ? parseFromDots(e.target.value) : undefined
+                                    )
+                                  }
+                                  style={{ height: 32, fontSize: '0.775rem' }}
+                                />
+                              </td>
+                              <td>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  className={styles.input}
+                                  value={v.stock !== undefined ? v.stock : 0}
+                                  onChange={(e) =>
+                                    handleUpdateVariantField(
+                                      idx,
+                                      'stock',
+                                      Math.max(0, parseInt(e.target.value) || 0)
+                                    )
+                                  }
+                                  style={{ height: 32, fontSize: '0.775rem' }}
+                                />
+                              </td>
+                              <td style={{ textAlign: 'center' }}>
+                                <button
+                                  type="button"
+                                  className={styles.deleteVariantBtn}
+                                  onClick={() => handleRemoveVariant(idx)}
+                                  title="Xóa biến thể này"
+                                >
+                                  <FiTrash2 size={14} />
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Mobile Fluid Matrix Cards (<= 768px - ZERO horizontal scroll) */}
+                    <div className={styles.mobileMatrixList}>
+                      {variants.map((v, idx) => (
+                        <div key={idx} className={styles.mobileMatrixCard}>
+                          <div className={styles.mobileMatrixHeader}>
+                            <div className={styles.mobileMatrixTitleCol}>
+                              <strong className={styles.mobileMatrixTitle}>
+                                {v.title || `Biến thể ${idx + 1}`}
+                              </strong>
+                              {v.attributes && (
+                                <div className={styles.mobileMatrixAttrs}>
+                                  {Object.entries(v.attributes).map(([k, val]) => (
+                                    <span key={k} className={styles.attributeBadge}>
+                                      {k}: {val}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                            <button
+                              type="button"
+                              className={styles.deleteVariantBtn}
+                              onClick={() => handleRemoveVariant(idx)}
+                              title="Xóa biến thể này"
+                            >
+                              <FiTrash2 size={15} />
+                            </button>
+                          </div>
+
+                          <div className={styles.mobileMatrixFields}>
+                            <div className={styles.mobileMatrixField}>
+                              <label className={styles.mobileFieldLabel}>Mã SKU</label>
                               <input
                                 type="text"
                                 className={styles.input}
                                 value={v.sku || ''}
+                                placeholder="Mã SKU phân loại"
                                 onChange={(e) => handleUpdateVariantField(idx, 'sku', e.target.value)}
-                                style={{ height: 32, fontSize: '0.775rem', fontFamily: 'monospace' }}
+                                style={{ height: 34, fontSize: '0.8125rem', fontFamily: 'monospace' }}
                               />
-                            </td>
-                            <td>
-                              <input
-                                type="text"
-                                inputMode="numeric"
-                                className={styles.input}
-                                placeholder="Giá bán"
-                                value={formatWithDots(v.price)}
-                                onChange={(e) =>
-                                  handleUpdateVariantField(idx, 'price', parseFromDots(e.target.value))
-                                }
-                                style={{ height: 32, fontSize: '0.775rem', fontWeight: 600, color: '#60a5fa' }}
-                              />
-                            </td>
-                            <td>
-                              <input
-                                type="text"
-                                inputMode="numeric"
-                                className={styles.input}
-                                placeholder="Giá sale"
-                                value={formatWithDots(v.salePrice)}
-                                onChange={(e) =>
-                                  handleUpdateVariantField(
-                                    idx,
-                                    'salePrice',
-                                    e.target.value ? parseFromDots(e.target.value) : undefined
-                                  )
-                                }
-                                style={{ height: 32, fontSize: '0.775rem' }}
-                              />
-                            </td>
-                            <td>
+                            </div>
+
+                            <div className={styles.mobileMatrixGrid2}>
+                              <div className={styles.mobileMatrixField}>
+                                <label className={styles.mobileFieldLabel}>Giá bán (₫) *</label>
+                                <input
+                                  type="text"
+                                  inputMode="numeric"
+                                  className={styles.input}
+                                  placeholder="VD: 250.000"
+                                  value={formatWithDots(v.price)}
+                                  onChange={(e) =>
+                                    handleUpdateVariantField(idx, 'price', parseFromDots(e.target.value))
+                                  }
+                                  style={{ height: 34, fontSize: '0.8125rem', fontWeight: 600, color: '#60a5fa' }}
+                                />
+                              </div>
+
+                              <div className={styles.mobileMatrixField}>
+                                <label className={styles.mobileFieldLabel}>Giá sale (₫)</label>
+                                <input
+                                  type="text"
+                                  inputMode="numeric"
+                                  className={styles.input}
+                                  placeholder="VD: 199.000"
+                                  value={formatWithDots(v.salePrice)}
+                                  onChange={(e) =>
+                                    handleUpdateVariantField(
+                                      idx,
+                                      'salePrice',
+                                      e.target.value ? parseFromDots(e.target.value) : undefined
+                                    )
+                                  }
+                                  style={{ height: 34, fontSize: '0.8125rem' }}
+                                />
+                              </div>
+                            </div>
+
+                            <div className={styles.mobileMatrixField}>
+                              <label className={styles.mobileFieldLabel}>Tồn kho *</label>
                               <input
                                 type="number"
                                 min="0"
@@ -1067,37 +1179,24 @@ export default function ProductEditModal({
                                     Math.max(0, parseInt(e.target.value) || 0)
                                   )
                                 }
-                                style={{ height: 32, fontSize: '0.775rem' }}
+                                style={{ height: 34, fontSize: '0.8125rem' }}
                               />
-                            </td>
-                            <td style={{ textAlign: 'center' }}>
-                              <button
-                                type="button"
-                                className={styles.deleteVariantBtn}
-                                onClick={() => handleRemoveVariant(idx)}
-                                title="Xóa biến thể này"
-                              >
-                                <FiTrash2 size={14} />
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
                 )}
               </div>
             </div>
 
             {/* Row 5: Description */}
             <div className={styles.formGroup}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6, flexWrap: 'wrap', gap: 6 }}>
                 <label className={styles.label} style={{ margin: 0 }}>
                   Mô tả sản phẩm (Văn bản, hình ảnh & video xen kẽ)
                 </label>
-                <span style={{ fontSize: 11.5, color: '#c084fc', fontWeight: 600 }}>
-                  📹 Hỗ trợ tải Video lưu vào CSDL MongoDB
-                </span>
               </div>
               <ProductDescriptionEditor
                 value={formData.description}

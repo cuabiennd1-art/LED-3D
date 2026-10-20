@@ -797,72 +797,47 @@ export default function AdminFlashSalePage() {
         )}
 
         {/* 3. Products in Current Slot Table */}
-        <div style={{ marginTop: 24 }}>
-          <div className={styles.cardHeader} style={{ marginBottom: 14 }}>
-            <div className={styles.cardTitle} style={{ fontSize: '1rem' }}>
-              <FiShoppingBag style={{ color: 'var(--admin-accent, #3b82f6)' }} /> Sản Phẩm Thuộc Khung Giờ: <strong>{currentSlot?.name}</strong> ({slotItems.length})
+        <div style={{ marginTop: 20 }}>
+          <div className={styles.slotProductsHeader}>
+            <div className={styles.slotProductsTitleWrap}>
+              <FiShoppingBag className={styles.slotProductsIcon} />
+              <span className={styles.slotProductsTitle}>
+                Sản phẩm slot: <strong className={styles.slotNameHighlight}>{currentSlot?.name}</strong>
+                <span className={styles.slotCountTag}>({slotItems.length})</span>
+              </span>
             </div>
             <button
               type="button"
-              className={styles.btnAddProduct}
+              className={styles.btnAddProductCompact}
               onClick={() => setIsProductModalOpen(true)}
             >
-              <FiPlus /> Thêm Sản Phẩm Vào Khung Giờ Này
+              <FiPlus size={14} /> Thêm
             </button>
           </div>
 
           {/* Bulk Discount Toolbar */}
           {slotItems.length > 0 && (
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              flexWrap: 'wrap',
-              gap: 12,
-              padding: '12px 16px',
-              background: 'rgba(249, 115, 22, 0.08)',
-              border: '1px solid rgba(249, 115, 22, 0.25)',
-              borderRadius: 8,
-              marginBottom: 16,
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                <span style={{ fontSize: '0.875rem', fontWeight: 600, color: '#f97316' }}>
-                  ⚡ Cài đặt nhanh % giảm giá cho toàn bộ {slotItems.length} sản phẩm:
+            <div className={styles.bulkToolbar}>
+              <div className={styles.bulkLeftArea}>
+                <span className={styles.bulkText}>
+                  ⚡ Giảm nhanh {slotItems.length} SP:
                 </span>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <div className={styles.bulkInputGroup}>
                   <input
                     type="number"
                     min={1}
                     max={99}
                     value={bulkDiscountPercent}
                     onChange={(e) => setBulkDiscountPercent(Number(e.target.value) || 0)}
-                    style={{
-                      width: 70,
-                      padding: '6px 10px',
-                      borderRadius: 6,
-                      background: 'var(--admin-input-bg, #1f2430)',
-                      border: '1px solid #f97316',
-                      color: '#fff',
-                      fontWeight: 700,
-                      textAlign: 'center',
-                    }}
+                    className={styles.bulkInput}
                   />
-                  <span style={{ fontWeight: 700, color: '#f97316' }}>%</span>
+                  <span className={styles.bulkPercentSign}>%</span>
                   <button
                     type="button"
                     onClick={handleApplyBulkDiscount}
-                    style={{
-                      padding: '6px 14px',
-                      borderRadius: 6,
-                      background: '#f97316',
-                      color: '#fff',
-                      border: 'none',
-                      fontWeight: 600,
-                      fontSize: '0.85rem',
-                      cursor: 'pointer',
-                    }}
+                    className={styles.btnApplyBulk}
                   >
-                    Áp dụng tất cả
+                    Áp dụng
                   </button>
                 </div>
               </div>
@@ -870,18 +845,9 @@ export default function AdminFlashSalePage() {
               <button
                 type="button"
                 onClick={handleMakeSlotLiveNow}
-                style={{
-                  padding: '6px 12px',
-                  borderRadius: 6,
-                  background: 'rgba(59, 130, 246, 0.15)',
-                  border: '1px solid rgba(59, 130, 246, 0.4)',
-                  color: '#60a5fa',
-                  fontSize: '0.8125rem',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                }}
+                className={styles.btnMakeLiveNow}
               >
-                🔥 Kích hoạt slot này ngay (Cả ngày 00:00 - 23:59)
+                🔥 Kích hoạt slot cả ngày (00:00 - 23:59)
               </button>
             </div>
           )}
@@ -891,216 +857,380 @@ export default function AdminFlashSalePage() {
               Khung giờ này chưa có sản phẩm nào. Bấm <strong>"+ Thêm Sản Phẩm"</strong> để chọn hàng và cài đặt % Sale.
             </div>
           ) : (
-            <div className={styles.tableResponsive}>
-              <table className={styles.table}>
-                <thead>
-                  <tr>
-                    <th style={{ width: 40, textAlign: 'center' }}>Bật</th>
-                    <th style={{ width: 65, textAlign: 'center' }}>Ảnh</th>
-                    <th style={{ minWidth: 260 }}>Tên sản phẩm & Phân loại</th>
-                    <th style={{ width: 140 }}>Giá gốc / Giá sale</th>
-                    <th style={{ width: 120 }}>% Flash Sale</th>
-                    <th style={{ width: 140 }}>Giá Flash Sale</th>
-                    <th style={{ width: 110 }}>Đã bán 🔥</th>
-                    <th style={{ width: 60, textAlign: 'center' }}>Xóa</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {slotItems.map((item, idx) => {
-                    const prod = typeof item.product === 'object' && item.product !== null ? item.product : {};
-                    const prodName = prod.name || (item as any).name || prod.title || 'Sản phẩm Flash Sale';
-                    const prodImg = getProductCoverImage(prod, (item as any).image || '/file.svg');
-                    const realStock = Array.isArray(prod.variants) && prod.variants.length > 0
-                      ? prod.variants.reduce((sum: number, v: any) => sum + (Number(v.stock) || 0), 0)
-                      : (Number(prod.stock) || 0);
+            <>
+              <div className={styles.tableResponsive}>
+                <table className={styles.table}>
+                  <thead>
+                    <tr>
+                      <th style={{ width: 40, textAlign: 'center' }}>Bật</th>
+                      <th style={{ width: 65, textAlign: 'center' }}>Ảnh</th>
+                      <th style={{ minWidth: 260 }}>Tên sản phẩm & Phân loại</th>
+                      <th style={{ width: 140 }}>Giá gốc / Giá sale</th>
+                      <th style={{ width: 120 }}>% Flash Sale</th>
+                      <th style={{ width: 140 }}>Giá Flash Sale</th>
+                      <th style={{ width: 110 }}>Đã bán 🔥</th>
+                      <th style={{ width: 60, textAlign: 'center' }}>Xóa</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {slotItems.map((item, idx) => {
+                      const prod = typeof item.product === 'object' && item.product !== null ? item.product : {};
+                      const prodName = prod.name || (item as any).name || prod.title || 'Sản phẩm Flash Sale';
+                      const prodImg = getProductCoverImage(prod, (item as any).image || '/file.svg');
+                      const realStock = Array.isArray(prod.variants) && prod.variants.length > 0
+                        ? prod.variants.reduce((sum: number, v: any) => sum + (Number(v.stock) || 0), 0)
+                        : (Number(prod.stock) || 0);
 
-                    const itemId = String(item._id || item.productId || idx);
-                    const isExpanded = Boolean(expandedProductVariantIds[itemId]);
-                    const hasVariants = Array.isArray(prod.variants) && prod.variants.length > 0;
+                      const itemId = String(item._id || item.productId || idx);
+                      const isExpanded = Boolean(expandedProductVariantIds[itemId]);
+                      const hasVariants = Array.isArray(prod.variants) && prod.variants.length > 0;
 
-                    return (
-                      <React.Fragment key={idx}>
-                        <tr style={{ opacity: item.isActive ? 1 : 0.5 }}>
-                          <td style={{ textAlign: 'center' }}>
-                            <input
-                              type="checkbox"
-                              checked={item.isActive}
-                              onChange={(e) => handleItemChangeInSlot(idx, 'isActive', e.target.checked)}
-                              style={{ accentColor: '#f97316', width: 18, height: 18, cursor: 'pointer' }}
-                            />
-                          </td>
-                          <td style={{ textAlign: 'center' }}>
-                            <img
-                              src={prodImg}
-                              alt={prodName}
-                              className={styles.tableThumb}
-                              style={{ width: 44, height: 44, borderRadius: 6, objectFit: 'cover' }}
-                            />
-                          </td>
-                          <td>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                              <strong style={{ color: 'var(--admin-text, #f3f4f6)', fontSize: '0.875rem', lineHeight: 1.35, fontWeight: 700 }}>
-                                {prodName}
-                              </strong>
-                              <div style={{ fontSize: '0.75rem', color: 'var(--admin-text-muted, #9ca3af)', display: 'flex', alignItems: 'center', gap: 12 }}>
-                                <span>Kho: <strong style={{ color: realStock < 10 ? '#ef4444' : '#10b981' }}>{realStock}</strong> cái</span>
-                                {hasVariants && (
-                                  <button
-                                    type="button"
-                                    onClick={() => toggleVariantPreview(itemId)}
-                                    style={{
-                                      background: 'none',
-                                      border: 'none',
-                                      color: '#60a5fa',
-                                      cursor: 'pointer',
-                                      padding: 0,
-                                      fontSize: '0.75rem',
-                                      textDecoration: 'underline',
-                                    }}
-                                  >
-                                    {isExpanded ? '▲ Thu gọn phân loại' : `▼ Xem ${prod.variants.length} phân loại (giảm ${item.flashPercent !== undefined ? item.flashPercent : (item.discountPercent || 0)}% từ giá sale)`}
-                                  </button>
+                      return (
+                        <React.Fragment key={idx}>
+                          <tr style={{ opacity: item.isActive ? 1 : 0.5 }}>
+                            <td style={{ textAlign: 'center' }}>
+                              <input
+                                type="checkbox"
+                                checked={item.isActive}
+                                onChange={(e) => handleItemChangeInSlot(idx, 'isActive', e.target.checked)}
+                                style={{ accentColor: '#f97316', width: 18, height: 18, cursor: 'pointer' }}
+                              />
+                            </td>
+                            <td style={{ textAlign: 'center' }}>
+                              <img
+                                src={prodImg}
+                                alt={prodName}
+                                className={styles.tableThumb}
+                                style={{ width: 44, height: 44, borderRadius: 6, objectFit: 'cover' }}
+                              />
+                            </td>
+                            <td>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                <strong style={{ color: 'var(--admin-text, #f3f4f6)', fontSize: '0.875rem', lineHeight: 1.35, fontWeight: 700 }}>
+                                  {prodName}
+                                </strong>
+                                <div style={{ fontSize: '0.75rem', color: 'var(--admin-text-muted, #9ca3af)', display: 'flex', alignItems: 'center', gap: 12 }}>
+                                  <span>Kho: <strong style={{ color: realStock < 10 ? '#ef4444' : '#10b981' }}>{realStock}</strong> cái</span>
+                                  {hasVariants && (
+                                    <button
+                                      type="button"
+                                      onClick={() => toggleVariantPreview(itemId)}
+                                      style={{
+                                        background: 'none',
+                                        border: 'none',
+                                        color: '#60a5fa',
+                                        cursor: 'pointer',
+                                        padding: 0,
+                                        fontSize: '0.75rem',
+                                        textDecoration: 'underline',
+                                      }}
+                                    >
+                                      {isExpanded ? '▲ Thu gọn phân loại' : `▼ Xem ${prod.variants.length} phân loại (giảm ${item.flashPercent !== undefined ? item.flashPercent : (item.discountPercent || 0)}% từ giá sale)`}
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            </td>
+                            <td style={{ fontWeight: 600, color: 'var(--admin-text-muted, #9ca3af)' }}>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                <span style={{ color: '#10b981', fontWeight: 700, fontSize: '0.875rem' }}>
+                                  {formatPrice(item.salePrice || item.originalPrice)}
+                                </span>
+                                {item.originalPrice > (item.salePrice || 0) && (
+                                  <span style={{ textDecoration: 'line-through', fontSize: '0.72rem', color: '#9ca3af' }}>
+                                    Gốc: {formatPrice(item.originalPrice)}
+                                  </span>
                                 )}
                               </div>
-                            </div>
-                          </td>
-                          <td style={{ fontWeight: 600, color: 'var(--admin-text-muted, #9ca3af)' }}>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                              <span style={{ color: '#10b981', fontWeight: 700, fontSize: '0.875rem' }}>
-                                {formatPrice(item.salePrice || item.originalPrice)}
-                              </span>
-                              {item.originalPrice > (item.salePrice || 0) && (
-                                <span style={{ textDecoration: 'line-through', fontSize: '0.72rem', color: '#9ca3af' }}>
-                                  Gốc: {formatPrice(item.originalPrice)}
+                            </td>
+                            <td>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                  <input
+                                    type="number"
+                                    min={0}
+                                    max={99}
+                                    className={styles.tableInput}
+                                    value={item.flashPercent !== undefined ? item.flashPercent : (item.discountPercent || '')}
+                                    onChange={(e) => handleItemChangeInSlot(idx, 'flashPercent', e.target.value)}
+                                    style={{ width: 65, color: '#f97316', fontWeight: 700 }}
+                                  />
+                                  <span style={{ fontWeight: 700, color: '#f97316' }}>%</span>
+                                </div>
+                                <span style={{ fontSize: '0.7rem', color: '#f97316', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                                  Tổng: -{item.discountPercent || 0}%
                                 </span>
-                              )}
-                            </div>
-                          </td>
-                          <td>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                                <input
-                                  type="number"
-                                  min={0}
-                                  max={99}
-                                  className={styles.tableInput}
-                                  value={item.flashPercent !== undefined ? item.flashPercent : (item.discountPercent || '')}
-                                  onChange={(e) => handleItemChangeInSlot(idx, 'flashPercent', e.target.value)}
-                                  style={{ width: 65, color: '#f97316', fontWeight: 700 }}
-                                />
-                                <span style={{ fontWeight: 700, color: '#f97316' }}>%</span>
                               </div>
-                              <span style={{ fontSize: '0.7rem', color: '#f97316', fontWeight: 600, whiteSpace: 'nowrap' }}>
-                                Tổng: -{item.discountPercent || 0}%
+                            </td>
+                            <td>
+                              <input
+                                type="number"
+                                step={1000}
+                                min={0}
+                                className={styles.tableInput}
+                                value={item.flashPrice || ''}
+                                onChange={(e) => handleItemChangeInSlot(idx, 'flashPrice', e.target.value)}
+                                style={{ color: '#f97316', fontWeight: 800 }}
+                              />
+                            </td>
+                            <td>
+                              <input
+                                type="number"
+                                min={0}
+                                className={styles.tableInput}
+                                value={item.soldCount || ''}
+                                onChange={(e) => handleItemChangeInSlot(idx, 'soldCount', e.target.value)}
+                                style={{ width: 80, color: '#f97316' }}
+                              />
+                            </td>
+                            <td style={{ textAlign: 'center' }}>
+                              <button
+                                type="button"
+                                className={styles.btnDeleteRow}
+                                onClick={() => handleRemoveItemFromSlot(idx)}
+                                title="Xóa sản phẩm khỏi khung giờ này"
+                              >
+                                <FiTrash2 />
+                              </button>
+                            </td>
+                          </tr>
+
+                          {/* Variant breakdown sub-row */}
+                          {hasVariants && isExpanded && (
+                            <tr style={{ background: 'rgba(0,0,0,0.25)' }}>
+                              <td colSpan={8} style={{ padding: '10px 16px' }}>
+                                <div style={{
+                                  padding: '10px 14px',
+                                  background: 'var(--admin-bg, #111318)',
+                                  borderRadius: 8,
+                                  border: '1px dashed var(--admin-border, #374151)',
+                                }}>
+                                  <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#f97316', marginBottom: 6 }}>
+                                    ⚡ Bảng giá Flash Sale từng phân loại (giảm {item.flashPercent !== undefined ? item.flashPercent : (item.discountPercent || 0)}% từ giá sale, tổng giảm: -{item.discountPercent || 0}%):
+                                  </div>
+                                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 8 }}>
+                                    {prod.variants.map((v: any, vIdx: number) => {
+                                      const vOrig = Number(v.price) || item.originalPrice;
+                                      const vSale = (Number(v.salePrice) && Number(v.salePrice) > 0 && Number(v.salePrice) < vOrig)
+                                        ? Number(v.salePrice)
+                                        : vOrig;
+                                      const fPct = item.flashPercent !== undefined ? item.flashPercent : (item.discountPercent || 0);
+                                      const vFlash = Math.round((vSale * (1 - fPct / 100)) / 1000) * 1000;
+                                      const vProdSalePct = vOrig > vSale ? Math.round(((vOrig - vSale) / vOrig) * 100) : 0;
+                                      const vTotalPct = Math.min(99, vProdSalePct + fPct);
+                                      const vName = v.title || v.name || v.color || v.size || `Phân loại #${vIdx + 1}`;
+                                      return (
+                                        <div key={vIdx} style={{
+                                          display: 'flex',
+                                          justifyContent: 'space-between',
+                                          alignItems: 'center',
+                                          padding: '6px 10px',
+                                          background: 'rgba(255,255,255,0.03)',
+                                          borderRadius: 6,
+                                          fontSize: '0.78rem',
+                                          border: '1px solid var(--admin-border, #2d3343)',
+                                        }}>
+                                          <span style={{ color: '#e5e7eb', fontWeight: 500 }}>{vName}</span>
+                                          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                                            {vOrig > vSale && (
+                                              <span style={{ textDecoration: 'line-through', color: '#9ca3af', fontSize: '0.72rem' }}>
+                                                {formatPrice(vOrig)}
+                                              </span>
+                                            )}
+                                            <span style={{ color: '#10b981', fontSize: '0.72rem' }}>
+                                              {formatPrice(vSale)}
+                                            </span>
+                                            <span style={{ color: '#f97316', fontWeight: 800 }}>
+                                              {formatPrice(vFlash)}
+                                            </span>
+                                            <span style={{ background: '#f97316', color: '#fff', fontSize: '0.65rem', padding: '1px 5px', borderRadius: 3, fontWeight: 700 }}>
+                                              -{vTotalPct}%
+                                            </span>
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </React.Fragment>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile Flash Sale Product Cards View (<= 768px - ZERO horizontal scroll) */}
+              <div className={styles.mobileFlashItemList}>
+                {slotItems.map((item, idx) => {
+                  const prod = typeof item.product === 'object' && item.product !== null ? item.product : {};
+                  const prodName = prod.name || (item as any).name || prod.title || 'Sản phẩm Flash Sale';
+                  const prodImg = getProductCoverImage(prod, (item as any).image || '/file.svg');
+                  const realStock = Array.isArray(prod.variants) && prod.variants.length > 0
+                    ? prod.variants.reduce((sum: number, v: any) => sum + (Number(v.stock) || 0), 0)
+                    : (Number(prod.stock) || 0);
+
+                  const itemId = String(item._id || item.productId || idx);
+                  const isExpanded = Boolean(expandedProductVariantIds[itemId]);
+                  const hasVariants = Array.isArray(prod.variants) && prod.variants.length > 0;
+
+                  return (
+                    <div
+                      key={idx}
+                      className={`${styles.mobileFlashCard} ${!item.isActive ? styles.mobileFlashCardInactive : ''}`}
+                    >
+                      {/* Top Row: Checkbox, Thumbnail, Title & Current Price, Delete */}
+                      <div className={styles.mobileCardTop}>
+                        <input
+                          type="checkbox"
+                          checked={item.isActive}
+                          onChange={(e) => handleItemChangeInSlot(idx, 'isActive', e.target.checked)}
+                          className={styles.mobileCheckbox}
+                          title={item.isActive ? 'Đang bật trong slot' : 'Đang tắt'}
+                        />
+
+                        <img
+                          src={prodImg}
+                          alt={prodName}
+                          className={styles.mobileThumb}
+                        />
+
+                        <div className={styles.mobileMetaArea}>
+                          <strong className={styles.mobileProdTitle}>{prodName}</strong>
+                          <div className={styles.mobilePriceRow}>
+                            <span className={styles.mobileCurrentPriceTag}>
+                              {formatPrice(item.salePrice || item.originalPrice)}
+                            </span>
+                            {item.originalPrice > (item.salePrice || 0) && (
+                              <span className={styles.mobileOrigPriceTag}>
+                                {formatPrice(item.originalPrice)}
                               </span>
-                            </div>
-                          </td>
-                          <td>
+                            )}
+                            <span className={styles.mobileStockTag}>
+                              • Kho: <strong>{realStock}</strong>
+                            </span>
+                          </div>
+                          {hasVariants && (
+                            <button
+                              type="button"
+                              onClick={() => toggleVariantPreview(itemId)}
+                              className={styles.mobileBtnVariantToggle}
+                            >
+                              {isExpanded ? '▲ Thu gọn' : `▼ Xem ${prod.variants.length} phân loại`}
+                            </button>
+                          )}
+                        </div>
+
+                        <button
+                          type="button"
+                          className={styles.btnDeleteRow}
+                          onClick={() => handleRemoveItemFromSlot(idx)}
+                          title="Xóa khỏi khung giờ này"
+                        >
+                          <FiTrash2 size={14} />
+                        </button>
+                      </div>
+
+                      {/* Bottom Action Strip: 3-column micro grid for fast editing */}
+                      <div className={styles.mobileCardActionStrip}>
+                        <div className={styles.mobileFieldCol}>
+                          <label className={styles.mobileFieldLabel}>% Giảm</label>
+                          <div className={styles.mobileInputWrap}>
+                            <input
+                              type="number"
+                              min={0}
+                              max={99}
+                              className={styles.mobileFieldInput}
+                              value={item.flashPercent !== undefined ? item.flashPercent : (item.discountPercent || '')}
+                              onChange={(e) => handleItemChangeInSlot(idx, 'flashPercent', e.target.value)}
+                            />
+                            <span className={styles.mobileFieldSuffix}>%</span>
+                          </div>
+                          <span className={styles.mobileFieldHint}>Tổng: -{item.discountPercent || 0}%</span>
+                        </div>
+
+                        <div className={styles.mobileFieldCol}>
+                          <label className={styles.mobileFieldLabel}>Giá Flash Sale</label>
+                          <div className={styles.mobileInputWrap}>
                             <input
                               type="number"
                               step={1000}
                               min={0}
-                              className={styles.tableInput}
+                              className={styles.mobileFieldInputHighlight}
                               value={item.flashPrice || ''}
                               onChange={(e) => handleItemChangeInSlot(idx, 'flashPrice', e.target.value)}
-                              style={{ color: '#f97316', fontWeight: 800 }}
                             />
-                          </td>
-                          <td>
+                            <span className={styles.mobileFieldSuffix}>₫</span>
+                          </div>
+                          <span className={styles.mobileFieldHintPrice}>
+                            {item.flashPrice ? formatPrice(item.flashPrice) : 'Chưa nhập'}
+                          </span>
+                        </div>
+
+                        <div className={styles.mobileFieldCol}>
+                          <label className={styles.mobileFieldLabel}>Đã bán ảo 🔥</label>
+                          <div className={styles.mobileInputWrap}>
                             <input
                               type="number"
                               min={0}
-                              className={styles.tableInput}
+                              className={styles.mobileFieldInput}
                               value={item.soldCount || ''}
                               onChange={(e) => handleItemChangeInSlot(idx, 'soldCount', e.target.value)}
-                              style={{ width: 80, color: '#f97316' }}
                             />
-                          </td>
-                          <td style={{ textAlign: 'center' }}>
-                            <button
-                              type="button"
-                              className={styles.btnDeleteRow}
-                              onClick={() => handleRemoveItemFromSlot(idx)}
-                              title="Xóa sản phẩm khỏi khung giờ này"
-                            >
-                              <FiTrash2 />
-                            </button>
-                          </td>
-                        </tr>
+                          </div>
+                          <span className={styles.mobileFieldHint}>sp</span>
+                        </div>
+                      </div>
 
-                        {/* Variant breakdown sub-row */}
-                        {hasVariants && isExpanded && (
-                          <tr style={{ background: 'rgba(0,0,0,0.25)' }}>
-                            <td colSpan={8} style={{ padding: '10px 16px' }}>
-                              <div style={{
-                                padding: '10px 14px',
-                                background: 'var(--admin-bg, #111318)',
-                                borderRadius: 8,
-                                border: '1px dashed var(--admin-border, #374151)',
-                              }}>
-                                <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#f97316', marginBottom: 6 }}>
-                                  ⚡ Bảng giá Flash Sale từng phân loại (giảm {item.flashPercent !== undefined ? item.flashPercent : (item.discountPercent || 0)}% từ giá sale, tổng giảm: -{item.discountPercent || 0}%):
+                      {/* Variant Breakdown Card when expanded */}
+                      {hasVariants && isExpanded && (
+                        <div className={styles.mobileVariantBreakdown}>
+                          <div className={styles.mobileVariantTitle}>
+                            ⚡ Bảng giá Flash Sale từng phân loại (giảm {item.flashPercent !== undefined ? item.flashPercent : (item.discountPercent || 0)}% từ giá sale):
+                          </div>
+                          <div className={styles.mobileVariantGrid}>
+                            {prod.variants.map((v: any, vIdx: number) => {
+                              const vOrig = Number(v.price) || item.originalPrice;
+                              const vSale = (Number(v.salePrice) && Number(v.salePrice) > 0 && Number(v.salePrice) < vOrig)
+                                ? Number(v.salePrice)
+                                : vOrig;
+                              const fPct = item.flashPercent !== undefined ? item.flashPercent : (item.discountPercent || 0);
+                              const vFlash = Math.round((vSale * (1 - fPct / 100)) / 1000) * 1000;
+                              const vProdSalePct = vOrig > vSale ? Math.round(((vOrig - vSale) / vOrig) * 100) : 0;
+                              const vTotalPct = Math.min(99, vProdSalePct + fPct);
+                              const vName = v.title || v.name || v.color || v.size || `Phân loại #${vIdx + 1}`;
+
+                              return (
+                                <div key={vIdx} className={styles.mobileVariantCardItem}>
+                                  <span className={styles.mobileVariantItemName}>{vName}</span>
+                                  <div className={styles.mobileVariantItemPrices}>
+                                    {vOrig > vSale && (
+                                      <span className={styles.mobileVariantOrigPrice}>{formatPrice(vOrig)}</span>
+                                    )}
+                                    <span className={styles.mobileVariantSalePrice}>{formatPrice(vSale)}</span>
+                                    <strong className={styles.mobileVariantFlashPrice}>{formatPrice(vFlash)}</strong>
+                                    <span className={styles.mobileVariantBadge}>-{vTotalPct}%</span>
+                                  </div>
                                 </div>
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 8 }}>
-                                  {prod.variants.map((v: any, vIdx: number) => {
-                                    const vOrig = Number(v.price) || item.originalPrice;
-                                    const vSale = (Number(v.salePrice) && Number(v.salePrice) > 0 && Number(v.salePrice) < vOrig)
-                                      ? Number(v.salePrice)
-                                      : vOrig;
-                                    const fPct = item.flashPercent !== undefined ? item.flashPercent : (item.discountPercent || 0);
-                                    const vFlash = Math.round((vSale * (1 - fPct / 100)) / 1000) * 1000;
-                                    const vProdSalePct = vOrig > vSale ? Math.round(((vOrig - vSale) / vOrig) * 100) : 0;
-                                    const vTotalPct = Math.min(99, vProdSalePct + fPct);
-                                    const vName = v.title || v.name || v.color || v.size || `Phân loại #${vIdx + 1}`;
-                                    return (
-                                      <div key={vIdx} style={{
-                                        display: 'flex',
-                                        justifyContent: 'space-between',
-                                        alignItems: 'center',
-                                        padding: '6px 10px',
-                                        background: 'rgba(255,255,255,0.03)',
-                                        borderRadius: 6,
-                                        fontSize: '0.78rem',
-                                        border: '1px solid var(--admin-border, #2d3343)',
-                                      }}>
-                                        <span style={{ color: '#e5e7eb', fontWeight: 500 }}>{vName}</span>
-                                        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                                          {vOrig > vSale && (
-                                            <span style={{ textDecoration: 'line-through', color: '#9ca3af', fontSize: '0.72rem' }}>
-                                              {formatPrice(vOrig)}
-                                            </span>
-                                          )}
-                                          <span style={{ color: '#10b981', fontSize: '0.72rem' }}>
-                                            {formatPrice(vSale)}
-                                          </span>
-                                          <span style={{ color: '#f97316', fontWeight: 800 }}>
-                                            {formatPrice(vFlash)}
-                                          </span>
-                                          <span style={{ background: '#f97316', color: '#fff', fontSize: '0.65rem', padding: '1px 5px', borderRadius: 3, fontWeight: 700 }}>
-                                            -{vTotalPct}%
-                                          </span>
-                                        </div>
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              </div>
-                            </td>
-                          </tr>
-                        )}
-                      </React.Fragment>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </>
           )}
         </div>
       </div>
 
       {/* 4. FOMO & Social Proof Settings Card */}
       <div className={styles.card}>
-        <div className={styles.cardHeader} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+        <div className={styles.cardHeader}>
           <div className={styles.cardTitle}>
             <FiBell style={{ color: 'var(--admin-accent, #3b82f6)' }} /> Hiệu Ứng Tâm Lý FOMO & Social Proof
           </div>

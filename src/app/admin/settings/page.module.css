@@ -1,7 +1,11 @@
 .container {
-  padding: 24px;
+  padding: 0;
+  width: 100%;
   max-width: 1400px;
   margin: 0 auto;
+  box-sizing: border-box;
+  flex-shrink: 0;
+  min-height: min-content;
 }
 
 .header {
@@ -734,4 +738,336 @@
   border: 1px solid rgba(255, 255, 255, 0.1);
   background: #000;
 }
+
+/* Email Test Styles */
+.emailTestRow {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.emailTestRow .input {
+  flex: 1;
+  min-width: 240px;
+}
+
+.emailTestBtn {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #fff;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.8125rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: opacity 0.2s;
+  white-space: nowrap;
+}
+
+.emailTestBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* =========================================================
+   Mobile Responsiveness (<= 768px)
+   ========================================================= */
+@media (max-width: 768px) {
+  .container {
+    padding: 0;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    padding-bottom: 40px;
+  }
+
+  .header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+    margin-bottom: 16px;
+  }
+
+  .titleBox h1 {
+    font-size: 1.25rem;
+    line-height: 1.3;
+  }
+
+  .titleBox p {
+    font-size: 0.8rem;
+  }
+
+  .headerActions {
+    flex-direction: column;
+    width: 100%;
+    gap: 8px;
+  }
+
+  .resetBtn,
+  .saveBtn {
+    width: 100%;
+    justify-content: center;
+    height: 44px;
+    font-size: 0.875rem;
+    padding: 10px 14px;
+  }
+
+  /* Preset Themes */
+  .presetsCard {
+    padding: 14px 12px;
+    border-radius: 12px;
+    margin-bottom: 16px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .presetLabel {
+    font-size: 0.8125rem;
+  }
+
+  .presetList {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    width: 100%;
+  }
+
+  .presetBtn {
+    padding: 8px 10px;
+    font-size: 0.75rem;
+    justify-content: center;
+    width: 100%;
+  }
+
+  /* Main Grid */
+  .mainGrid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  /* Tab Header - horizontal touch scrolling */
+  .tabsContainer {
+    border-radius: 12px;
+  }
+
+  .tabHeader {
+    padding: 0 4px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    flex-wrap: nowrap;
+  }
+
+  .tabHeader::-webkit-scrollbar {
+    display: none;
+  }
+
+  .tabBtn {
+    padding: 12px 14px;
+    font-size: 0.8125rem;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .tabContent {
+    padding: 16px 12px;
+    gap: 16px;
+  }
+
+  .sectionHeader {
+    padding-bottom: 10px;
+    margin-bottom: 6px;
+  }
+
+  .sectionHeader h3 {
+    font-size: 0.95rem;
+    line-height: 1.35;
+  }
+
+  .sectionHeader p {
+    font-size: 0.75rem;
+  }
+
+  /* Form inputs & grids */
+  .fieldGrid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .input {
+    font-size: 0.875rem;
+    height: 42px;
+  }
+
+  .colorPickerRow {
+    padding: 6px 10px;
+  }
+
+  .colorInput {
+    width: 36px;
+    height: 36px;
+  }
+
+  .uploadRow {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .uploadRow .input {
+    width: 100%;
+  }
+
+  .uploadBtn {
+    width: 100%;
+    justify-content: center;
+    height: 42px;
+  }
+
+  /* Mode selector */
+  .modeSelector {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .modeCard {
+    padding: 12px;
+  }
+
+  /* Banners tab */
+  .bannerList {
+    gap: 14px;
+    margin-top: 12px;
+  }
+
+  .bannerCard {
+    padding: 14px 12px;
+    border-radius: 10px;
+    gap: 12px;
+  }
+
+  .bannerCardHeader {
+    padding-bottom: 8px;
+  }
+
+  .bannerBadge {
+    font-size: 0.8125rem;
+    padding: 3px 8px;
+  }
+
+  .bannerCardGrid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .bannerInputs {
+    gap: 10px;
+  }
+
+  .bannerLivePreviewWrap {
+    margin-top: 4px;
+  }
+
+  .addBannerBtn {
+    height: 44px;
+    font-size: 0.875rem;
+    padding: 10px 14px;
+  }
+
+  /* PC Mockup Grid on mobile */
+  .pcBannerMockupContainer {
+    padding: 12px;
+    margin-top: 16px;
+    border-radius: 10px;
+  }
+
+  .pcBannerMockupGrid {
+    grid-template-columns: 1fr;
+    aspect-ratio: auto;
+    gap: 8px;
+  }
+
+  .mockupMainBanner {
+    aspect-ratio: 16 / 8;
+  }
+
+  .mockupSideColumn {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto;
+    gap: 8px;
+  }
+
+  .mockupSideBanner {
+    aspect-ratio: 16 / 8;
+  }
+
+  /* Email Test Row */
+  .emailTestRow {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .emailTestRow .input {
+    width: 100%;
+    min-width: 0 !important;
+  }
+
+  .emailTestBtn {
+    width: 100%;
+    justify-content: center;
+    height: 42px;
+  }
+
+  /* Live Preview Column */
+  .previewSticky {
+    position: static;
+  }
+
+  .previewCard {
+    border-radius: 12px;
+  }
+
+  .previewHeader {
+    padding: 12px 14px;
+  }
+
+  .previewContainer {
+    padding: 14px 12px;
+    gap: 12px;
+  }
+
+  .mockProductCard {
+    padding: 10px;
+    gap: 10px;
+  }
+
+  .mockImg {
+    width: 54px;
+    height: 54px;
+  }
+
+  .mockTitle {
+    font-size: 0.8125rem;
+  }
+
+  .mockPrice {
+    font-size: 0.875rem;
+  }
+
+  .mockButtonsRow {
+    gap: 6px;
+  }
+
+  .mockPrimaryBtn,
+  .mockSecondaryBtn {
+    padding: 8px 10px;
+    font-size: 0.75rem;
+  }
+}
+
 

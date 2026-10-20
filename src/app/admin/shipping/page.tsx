@@ -579,28 +579,14 @@ export default function ShippingAdminPage() {
             </h3>
 
             {/* Origin Warehouse Info Banner */}
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                flexWrap: 'wrap',
-                gap: 8,
-                padding: '10px 14px',
-                backgroundColor: 'rgba(59, 130, 246, 0.08)',
-                border: '1px solid rgba(59, 130, 246, 0.2)',
-                borderRadius: 8,
-                marginBottom: 16,
-                fontSize: '0.85rem',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div className={styles.originInfoBanner}>
+              <div className={styles.originInfoLeft}>
                 <FiHome style={{ color: 'var(--primary, #3b82f6)', fontSize: 16 }} />
                 <span>
                   Kho gửi hàng (Origin): <strong>{config.originAddress?.name || 'Kho Tổng'}</strong> — {config.originAddress?.address ? `${config.originAddress.address}, ` : ''}{config.originAddress?.district}, {config.originAddress?.province}
                 </span>
               </div>
-              <span style={{ fontSize: '0.75rem', color: '#10b981', fontWeight: 600 }}>
+              <span className={styles.originStatusBadge}>
                 ● Đã đồng bộ điểm gửi với GHN / GHTK / Viettel Post
               </span>
             </div>
@@ -681,8 +667,7 @@ export default function ShippingAdminPage() {
 
                     <button
                       type="submit"
-                      className={styles.saveBtn}
-                      style={{ width: '100%', height: 42, justifyContent: 'center' }}
+                      className={`${styles.saveBtn} ${styles.calcSubmitBtn}`}
                       disabled={isCalculating}
                     >
                       <FiSend /> {isCalculating ? 'Đang tính...' : 'So sánh'}
@@ -768,8 +753,8 @@ export default function ShippingAdminPage() {
 
           {/* Section: Cấu Hình Địa Chỉ Kho Hàng Của Shop (Điểm Lấy Hàng) */}
           <div className={styles.card}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18, flexWrap: 'wrap', gap: 12 }}>
-              <div>
+            <div className={styles.warehouseHeader}>
+              <div className={styles.warehouseTitleWrap}>
                 <h3 className={styles.cardTitle} style={{ margin: 0 }}>
                   <FiHome style={{ color: 'var(--primary, #3b82f6)' }} />
                   Cấu Hình Địa Chỉ Kho Hàng (Điểm Lấy Hàng Của Shop)
@@ -794,7 +779,7 @@ export default function ShippingAdminPage() {
                 vietnamProvinces.find((p) => p.name === config.originAddress?.province) || vietnamProvinces[0];
 
               return (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16 }}>
+                <div className={styles.warehouseGrid}>
                   {/* Tên kho / Người đại diện */}
                   <div className={styles.inputGroup}>
                     <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -983,7 +968,7 @@ export default function ShippingAdminPage() {
 
           {/* Section 2: Cấu Hình Chi Tiết 3 Đơn Vị Vận Chuyển (API 8.3) */}
           <div className={styles.card}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
+            <div className={styles.carriersSectionHeader}>
               <h3 className={styles.cardTitle} style={{ margin: 0 }}>
                 <FiKey style={{ color: 'var(--primary, #3b82f6)' }} />
                 Cấu Hình Token API & Mã Cửa Hàng Từng Hãng
@@ -1008,34 +993,52 @@ export default function ShippingAdminPage() {
                   <div className={styles.brandLogo} style={{ backgroundColor: '#ea580c' }}>
                     GHN
                   </div>
-                  <div>
+                  <div className={styles.brandInfo}>
                     <h4>Giao Hàng Nhanh (GHN Express)</h4>
                     <p>Kết nối dịch vụ giao hàng thương mại điện tử chuyên nghiệp</p>
                   </div>
+                  <label className={`${styles.switch} ${styles.mobileSwitch}`}>
+                    <input
+                      type="checkbox"
+                      checked={config.carriers.ghn.enabled}
+                      onChange={(e) =>
+                        setConfig({
+                          ...config,
+                          carriers: {
+                            ...config.carriers,
+                            ghn: { ...config.carriers.ghn, enabled: e.target.checked },
+                          },
+                        })
+                      }
+                    />
+                    <span className={styles.slider}></span>
+                  </label>
                 </div>
 
-                <div className={styles.carrierActions}>
-                  <button
-                    type="button"
-                    className={styles.testBadge}
-                    style={{ borderColor: '#00BFA5', color: '#00BFA5' }}
-                    onClick={() => {
-                      setActiveModalCarrier('ghn');
-                      setIsConfigModalOpen(true);
-                    }}
-                  >
-                    <FiSettings /> Sửa Token & Shop ID
-                  </button>
-                  <button
-                    type="button"
-                    className={styles.testBadge}
-                    onClick={() => handleTestConnection('ghn', config.carriers.ghn.token)}
-                    disabled={testingProvider === 'ghn'}
-                  >
-                    <FiCheckCircle /> {testingProvider === 'ghn' ? 'Đang test...' : 'Test API GHN'}
-                  </button>
+                <div className={styles.carrierRight}>
+                  <div className={styles.carrierBtnGroup}>
+                    <button
+                      type="button"
+                      className={styles.testBadge}
+                      style={{ borderColor: '#00BFA5', color: '#00BFA5' }}
+                      onClick={() => {
+                        setActiveModalCarrier('ghn');
+                        setIsConfigModalOpen(true);
+                      }}
+                    >
+                      <FiSettings /> Sửa Token & Shop ID
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.testBadge}
+                      onClick={() => handleTestConnection('ghn', config.carriers.ghn.token)}
+                      disabled={testingProvider === 'ghn'}
+                    >
+                      <FiCheckCircle /> {testingProvider === 'ghn' ? 'Đang test...' : 'Test API GHN'}
+                    </button>
+                  </div>
 
-                  <label className={styles.switch}>
+                  <label className={`${styles.switch} ${styles.desktopSwitch}`}>
                     <input
                       type="checkbox"
                       checked={config.carriers.ghn.enabled}
@@ -1124,34 +1127,52 @@ export default function ShippingAdminPage() {
                   <div className={styles.brandLogo} style={{ backgroundColor: '#15803d' }}>
                     GHTK
                   </div>
-                  <div>
+                  <div className={styles.brandInfo}>
                     <h4>Giao Hàng Tiết Kiệm (GHTK)</h4>
                     <p>Phí ship cạnh tranh, tối ưu cho các đơn hàng thời trang toàn quốc</p>
                   </div>
+                  <label className={`${styles.switch} ${styles.mobileSwitch}`}>
+                    <input
+                      type="checkbox"
+                      checked={config.carriers.ghtk.enabled}
+                      onChange={(e) =>
+                        setConfig({
+                          ...config,
+                          carriers: {
+                            ...config.carriers,
+                            ghtk: { ...config.carriers.ghtk, enabled: e.target.checked },
+                          },
+                        })
+                      }
+                    />
+                    <span className={styles.slider}></span>
+                  </label>
                 </div>
 
-                <div className={styles.carrierActions}>
-                  <button
-                    type="button"
-                    className={styles.testBadge}
-                    style={{ borderColor: '#00BFA5', color: '#00BFA5' }}
-                    onClick={() => {
-                      setActiveModalCarrier('ghtk');
-                      setIsConfigModalOpen(true);
-                    }}
-                  >
-                    <FiSettings /> Sửa Token & Partner ID
-                  </button>
-                  <button
-                    type="button"
-                    className={styles.testBadge}
-                    onClick={() => handleTestConnection('ghtk', config.carriers.ghtk.token)}
-                    disabled={testingProvider === 'ghtk'}
-                  >
-                    <FiCheckCircle /> {testingProvider === 'ghtk' ? 'Đang test...' : 'Test API GHTK'}
-                  </button>
+                <div className={styles.carrierRight}>
+                  <div className={styles.carrierBtnGroup}>
+                    <button
+                      type="button"
+                      className={styles.testBadge}
+                      style={{ borderColor: '#00BFA5', color: '#00BFA5' }}
+                      onClick={() => {
+                        setActiveModalCarrier('ghtk');
+                        setIsConfigModalOpen(true);
+                      }}
+                    >
+                      <FiSettings /> Sửa Token & Partner ID
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.testBadge}
+                      onClick={() => handleTestConnection('ghtk', config.carriers.ghtk.token)}
+                      disabled={testingProvider === 'ghtk'}
+                    >
+                      <FiCheckCircle /> {testingProvider === 'ghtk' ? 'Đang test...' : 'Test API GHTK'}
+                    </button>
+                  </div>
 
-                  <label className={styles.switch}>
+                  <label className={`${styles.switch} ${styles.desktopSwitch}`}>
                     <input
                       type="checkbox"
                       checked={config.carriers.ghtk.enabled}
@@ -1240,34 +1261,52 @@ export default function ShippingAdminPage() {
                   <div className={styles.brandLogo} style={{ backgroundColor: '#dc2626' }}>
                     VTP
                   </div>
-                  <div>
+                  <div className={styles.brandInfo}>
                     <h4>Viettel Post (VTP)</h4>
                     <p>Mạng lưới rộng khắp phủ kín 63 tỉnh thành & hải đảo</p>
                   </div>
+                  <label className={`${styles.switch} ${styles.mobileSwitch}`}>
+                    <input
+                      type="checkbox"
+                      checked={config.carriers.viettelpost.enabled}
+                      onChange={(e) =>
+                        setConfig({
+                          ...config,
+                          carriers: {
+                            ...config.carriers,
+                            viettelpost: { ...config.carriers.viettelpost, enabled: e.target.checked },
+                          },
+                        })
+                      }
+                    />
+                    <span className={styles.slider}></span>
+                  </label>
                 </div>
 
-                <div className={styles.carrierActions}>
-                  <button
-                    type="button"
-                    className={styles.testBadge}
-                    style={{ borderColor: '#00BFA5', color: '#00BFA5' }}
-                    onClick={() => {
-                      setActiveModalCarrier('viettelpost');
-                      setIsConfigModalOpen(true);
-                    }}
-                  >
-                    <FiSettings /> Sửa Token & Tài Khoản
-                  </button>
-                  <button
-                    type="button"
-                    className={styles.testBadge}
-                    onClick={() => handleTestConnection('viettelpost', config.carriers.viettelpost.token)}
-                    disabled={testingProvider === 'viettelpost'}
-                  >
-                    <FiCheckCircle /> {testingProvider === 'viettelpost' ? 'Đang test...' : 'Test API VTP'}
-                  </button>
+                <div className={styles.carrierRight}>
+                  <div className={styles.carrierBtnGroup}>
+                    <button
+                      type="button"
+                      className={styles.testBadge}
+                      style={{ borderColor: '#00BFA5', color: '#00BFA5' }}
+                      onClick={() => {
+                        setActiveModalCarrier('viettelpost');
+                        setIsConfigModalOpen(true);
+                      }}
+                    >
+                      <FiSettings /> Sửa Token & Tài Khoản
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.testBadge}
+                      onClick={() => handleTestConnection('viettelpost', config.carriers.viettelpost.token)}
+                      disabled={testingProvider === 'viettelpost'}
+                    >
+                      <FiCheckCircle /> {testingProvider === 'viettelpost' ? 'Đang test...' : 'Test API VTP'}
+                    </button>
+                  </div>
 
-                  <label className={styles.switch}>
+                  <label className={`${styles.switch} ${styles.desktopSwitch}`}>
                     <input
                       type="checkbox"
                       checked={config.carriers.viettelpost.enabled}
@@ -1352,24 +1391,18 @@ export default function ShippingAdminPage() {
 
           {/* Section 3.5: Trung Tâm Kiểm Thử Đẩy Vận Đơn Viettel Post */}
           <div className={styles.card} style={{ border: '2px solid #dc2626', background: 'rgba(220, 38, 38, 0.02)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
+            <div className={styles.vtpSectionHeader}>
               <h3 className={styles.cardTitle} style={{ margin: 0, color: '#ef4444' }}>
                 <FiSend style={{ color: '#ef4444' }} />
                 Trung Tâm Kiểm Thử Đẩy Vận Đơn Viettel Post (Live Order Dispatch)
               </h3>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div className={styles.vtpHeaderBadgeGroup}>
                 <span
+                  className={styles.vtpStatusPill}
                   style={{
-                    fontSize: 11,
                     background: vtpInfo?.connected ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
                     color: vtpInfo?.connected ? '#10b981' : '#ef4444',
-                    padding: '4px 10px',
-                    borderRadius: 20,
-                    fontWeight: 700,
                     border: `1px solid ${vtpInfo?.connected ? '#10b981' : '#ef4444'}`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 5,
                   }}
                 >
                   <span style={{ width: 7, height: 7, borderRadius: '50%', background: vtpInfo?.connected ? '#10b981' : '#ef4444' }}></span>
@@ -1393,21 +1426,7 @@ export default function ShippingAdminPage() {
 
             {/* Warehouse & Account Info Badge */}
             {vtpInfo?.inventories && vtpInfo.inventories.length > 0 && (
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  flexWrap: 'wrap',
-                  gap: 10,
-                  padding: '12px 16px',
-                  backgroundColor: 'rgba(220, 38, 38, 0.06)',
-                  border: '1px solid rgba(220, 38, 38, 0.25)',
-                  borderRadius: 10,
-                  marginBottom: 20,
-                  fontSize: '0.85rem',
-                }}
-              >
+              <div className={styles.vtpWarehouseBanner}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                   <div>
                     <strong>Chủ tài khoản VTP:</strong> {vtpInfo.inventories[0].name} (SĐT: {vtpInfo.inventories[0].phone})
@@ -1425,43 +1444,25 @@ export default function ShippingAdminPage() {
             )}
 
             {/* Mode Switch Tabs */}
-            <div style={{ display: 'flex', gap: 10, marginBottom: 18 }}>
+            <div className={styles.vtpTabs}>
               <button
                 type="button"
+                className={styles.vtpTabBtn}
                 onClick={() => setTestPushTab('mock')}
                 style={{
-                  padding: '9px 16px',
-                  borderRadius: 8,
-                  fontWeight: 600,
-                  fontSize: '0.85rem',
-                  border: 'none',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 7,
                   background: testPushTab === 'mock' ? '#dc2626' : 'rgba(255,255,255,0.06)',
                   color: testPushTab === 'mock' ? '#ffffff' : 'var(--text-muted, #94a3b8)',
-                  transition: 'all 0.2s',
                 }}
               >
                 <FiZap /> Đẩy Đơn Thử Nghiệm Tự Động (Mock Order)
               </button>
               <button
                 type="button"
+                className={styles.vtpTabBtn}
                 onClick={() => setTestPushTab('order')}
                 style={{
-                  padding: '9px 16px',
-                  borderRadius: 8,
-                  fontWeight: 600,
-                  fontSize: '0.85rem',
-                  border: 'none',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 7,
                   background: testPushTab === 'order' ? '#dc2626' : 'rgba(255,255,255,0.06)',
                   color: testPushTab === 'order' ? '#ffffff' : 'var(--text-muted, #94a3b8)',
-                  transition: 'all 0.2s',
                 }}
               >
                 <FiPackage /> Đẩy Đơn Thật Trong Shop ({vtpInfo?.pendingOrders?.length || 0} đơn chờ)
@@ -1620,26 +1621,13 @@ export default function ShippingAdminPage() {
                   </div>
                 </div>
 
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    flexWrap: 'wrap',
-                    gap: 14,
-                    marginTop: 18,
-                    padding: '12px 16px',
-                    backgroundColor: 'rgba(255, 255, 255, 0.03)',
-                    borderRadius: 8,
-                    border: '1px solid var(--border-color, #232838)',
-                  }}
-                >
-                  <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontSize: '0.875rem' }}>
+                <div className={styles.vtpAutoCancelBar}>
+                  <label className={styles.vtpAutoCancelLabel}>
                     <input
                       type="checkbox"
                       checked={mockOrderForm.autoCancel}
                       onChange={(e) => setMockOrderForm({ ...mockOrderForm, autoCancel: e.target.checked })}
-                      style={{ width: 16, height: 16, cursor: 'pointer', accentColor: '#dc2626' }}
+                      style={{ width: 16, height: 16, cursor: 'pointer', accentColor: '#dc2626', flexShrink: 0 }}
                     />
                     <span>
                       <strong style={{ color: '#10b981' }}>Tự động gửi lệnh HỦY sau khi test thành công</strong>{' '}
@@ -1653,13 +1641,7 @@ export default function ShippingAdminPage() {
                     type="button"
                     onClick={handlePushMockOrder}
                     disabled={testPushLoading}
-                    className={styles.saveBtn}
-                    style={{
-                      background: '#dc2626',
-                      borderColor: '#dc2626',
-                      padding: '10px 24px',
-                      fontSize: '0.9rem',
-                    }}
+                    className={`${styles.saveBtn} ${styles.vtpPushBtn}`}
                   >
                     <FiSend /> {testPushLoading ? 'Đang đẩy đơn sang Viettel Post...' : '🚀 Đẩy Đơn Sang Viettel Post Ngay'}
                   </button>
@@ -1707,19 +1689,7 @@ export default function ShippingAdminPage() {
                       const curOrd = vtpInfo.pendingOrders.find((o: any) => o._id === selectedPendingOrderId);
                       if (!curOrd) return null;
                       return (
-                        <div
-                          style={{
-                            marginTop: 14,
-                            padding: '14px 18px',
-                            background: 'rgba(255, 255, 255, 0.04)',
-                            borderRadius: 8,
-                            border: '1px solid var(--border-color, #232838)',
-                            fontSize: '0.875rem',
-                            display: 'grid',
-                            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-                            gap: 10,
-                          }}
-                        >
+                        <div className={styles.selectedOrderCard}>
                           <div><strong>Khách hàng:</strong> {curOrd.customer?.name} ({curOrd.customer?.phone})</div>
                           <div><strong>Địa chỉ:</strong> {curOrd.customer?.address || `${curOrd.customer?.ward}, ${curOrd.customer?.district}, ${curOrd.customer?.province}`}</div>
                           <div><strong>Tổng tiền:</strong> {formatPrice(curOrd.totalAmount)} ({curOrd.paymentMethod === 'cod' ? 'Thu COD' : 'Chuyển khoản'})</div>
@@ -1733,13 +1703,7 @@ export default function ShippingAdminPage() {
                         type="button"
                         onClick={handlePushExistingOrder}
                         disabled={testPushLoading}
-                        className={styles.saveBtn}
-                        style={{
-                          background: '#dc2626',
-                          borderColor: '#dc2626',
-                          padding: '10px 24px',
-                          fontSize: '0.9rem',
-                        }}
+                        className={`${styles.saveBtn} ${styles.vtpPushBtn}`}
                       >
                         <FiPackage /> {testPushLoading ? 'Đang tạo vận đơn Viettel Post...' : '📦 Bàn Giao & Đẩy Đơn Sang Viettel Post'}
                       </button>
@@ -1755,15 +1719,7 @@ export default function ShippingAdminPage() {
 
             {/* LIVE RESULT CARD */}
             {testPushResult && (
-              <div
-                style={{
-                  marginTop: 20,
-                  padding: '18px 20px',
-                  backgroundColor: 'rgba(16, 185, 129, 0.08)',
-                  border: '1.5px solid #10b981',
-                  borderRadius: 10,
-                }}
-              >
+              <div className={styles.vtpResultCard}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10, marginBottom: 14 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#10b981', fontWeight: 700, fontSize: '1.05rem' }}>
                     <FiCheckCircle /> Đã Tạo Vận Đơn Viettel Post Thành Công!
@@ -1775,7 +1731,7 @@ export default function ShippingAdminPage() {
                   )}
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12, marginBottom: 16 }}>
+                <div className={styles.vtpResultGrid}>
                   <div style={{ background: 'var(--bg-main, #090a0f)', padding: '10px 14px', borderRadius: 8 }}>
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-muted, #94a3b8)' }}>MÃ VẬN ĐƠN VIETTEL POST</div>
                     <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#3b82f6', letterSpacing: 1, marginTop: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -1817,7 +1773,7 @@ export default function ShippingAdminPage() {
                 </div>
 
                 {/* Action Buttons for Result */}
-                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div className={styles.vtpResultActions}>
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                     <a
                       href={`https://viettelpost.com.vn/tra-cuu-hanh-trinh-don-hang?orderCode=${testPushResult.trackingCode}`}
@@ -1883,12 +1839,12 @@ export default function ShippingAdminPage() {
 
           {/* Section 4: Trung Tâm Kiểm Thử Webhook Vận Chuyển 3rd-Party */}
           <div className={styles.card} style={{ border: '2px solid #00BFA5' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <div className={styles.webhookSectionHeader}>
               <h3 className={styles.cardTitle} style={{ margin: 0 }}>
                 <FiActivity style={{ color: '#00BFA5' }} />
                 Trung Tâm Kiểm Thử Webhook Vận Chuyển (GHN / GHTK / Viettel Post)
               </h3>
-              <span style={{ fontSize: 11, background: '#e6fffa', color: '#00897b', padding: '4px 10px', borderRadius: 20, fontWeight: 700 }}>
+              <span style={{ fontSize: 11, background: '#e6fffa', color: '#00897b', padding: '4px 10px', borderRadius: 20, fontWeight: 700, alignSelf: 'flex-start' }}>
                 ⚡ Live Webhook Simulator
               </span>
             </div>
@@ -1972,7 +1928,7 @@ export default function ShippingAdminPage() {
             </div>
 
             {/* Quick 1-Click Stepper Action Buttons */}
-            <div style={{ marginTop: 16, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            <div className={styles.webhookBtnGroup}>
               <button
                 type="button"
                 className={styles.saveBtn}
@@ -2093,7 +2049,7 @@ export default function ShippingAdminPage() {
               {/* GHN Form */}
               {activeModalCarrier === 'ghn' && (
                 <>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-main, #090a0f)', padding: '12px 16px', borderRadius: 8, border: '1px solid var(--border-color, #232838)' }}>
+                  <div className={styles.modalActivationRow}>
                     <div>
                       <strong style={{ color: '#fff', fontSize: 14 }}>Kích hoạt dịch vụ GHN Express</strong>
                       <p style={{ margin: '2px 0 0', fontSize: 12, color: '#94a3b8' }}>Bật để tính phí tự động và đẩy vận đơn trực tiếp sang GHN</p>
@@ -2195,7 +2151,7 @@ export default function ShippingAdminPage() {
               {/* GHTK Form */}
               {activeModalCarrier === 'ghtk' && (
                 <>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-main, #090a0f)', padding: '12px 16px', borderRadius: 8, border: '1px solid var(--border-color, #232838)' }}>
+                  <div className={styles.modalActivationRow}>
                     <div>
                       <strong style={{ color: '#fff', fontSize: 14 }}>Kích hoạt dịch vụ GHTK</strong>
                       <p style={{ margin: '2px 0 0', fontSize: 12, color: '#94a3b8' }}>Dịch vụ Giao Hàng Tiết Kiệm</p>
@@ -2293,7 +2249,7 @@ export default function ShippingAdminPage() {
               {/* Viettel Post Form */}
               {activeModalCarrier === 'viettelpost' && (
                 <>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-main, #090a0f)', padding: '12px 16px', borderRadius: 8, border: '1px solid var(--border-color, #232838)' }}>
+                  <div className={styles.modalActivationRow}>
                     <div>
                       <strong style={{ color: '#fff', fontSize: 14 }}>Kích hoạt dịch vụ Viettel Post</strong>
                       <p style={{ margin: '2px 0 0', fontSize: 12, color: '#94a3b8' }}>Dịch vụ bưu chính Viettel Post</p>
@@ -2399,7 +2355,7 @@ export default function ShippingAdminPage() {
                 <FiActivity /> {testingProvider === activeModalCarrier ? 'Đang kiểm tra...' : `Test kết nối ${activeModalCarrier.toUpperCase()}`}
               </button>
 
-              <div style={{ display: 'flex', gap: 10 }}>
+              <div className={styles.modalFooterBtns}>
                 <button
                   type="button"
                   className={styles.secondaryBtn}

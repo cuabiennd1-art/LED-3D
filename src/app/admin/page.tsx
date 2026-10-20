@@ -243,6 +243,10 @@ export default function Dashboard() {
               options={{
                 maintainAspectRatio: false,
                 responsive: true,
+                interaction: {
+                  mode: 'index',
+                  intersect: false,
+                },
                 plugins: {
                   legend: { display: false },
                   tooltip: {
@@ -260,14 +264,20 @@ export default function Dashboard() {
                 scales: {
                   x: {
                     grid: { color: gridLineColor },
-                    ticks: { color: textMutedColor, font: { size: 12 } },
+                    ticks: {
+                      color: textMutedColor,
+                      font: { size: 11 },
+                      maxTicksLimit: 7,
+                      autoSkip: true,
+                      maxRotation: 0,
+                    },
                   },
                   y: {
                     beginAtZero: true,
                     grid: { color: gridLineColor },
                     ticks: {
                       color: textMutedColor,
-                      font: { size: 12 },
+                      font: { size: 11 },
                       callback: (val: any) => (val >= 1000000 ? `${val / 1000000}M` : val >= 1000 ? `${val / 1000}k` : val),
                     },
                   },
@@ -293,10 +303,10 @@ export default function Dashboard() {
                     position: 'bottom',
                     labels: {
                       color: textColor,
-                      padding: 14,
-                      font: { size: 12, weight: 600 },
-                      boxWidth: 12,
-                      boxHeight: 12,
+                      padding: 12,
+                      font: { size: 11, weight: 600 },
+                      boxWidth: 10,
+                      boxHeight: 10,
                     },
                   },
                   tooltip: {
@@ -324,6 +334,8 @@ export default function Dashboard() {
               Xem tất cả <FiArrowRight style={{ verticalAlign: 'middle' }} />
             </Link>
           </div>
+
+          {/* Desktop Table View */}
           <div className={styles.tableResponsive}>
             <table className={styles.table}>
               <thead>
@@ -350,7 +362,7 @@ export default function Dashboard() {
                           #{order.orderCode}
                         </Link>
                       </td>
-                      <td>{order.customer?.name}</td>
+                      <td>{order.customer?.name || 'Khách vãng lai'}</td>
                       <td style={{ color: 'var(--primary, #3b82f6)', fontWeight: 700 }}>
                         {formatPrice(order.totalAmount)}
                       </td>
@@ -388,6 +400,62 @@ export default function Dashboard() {
               </tbody>
             </table>
           </div>
+
+          {/* Mobile Order Cards View (shown on screen <= 640px) */}
+          <div className={styles.mobileOrderList}>
+            {!reportData?.recentOrders || reportData.recentOrders.length === 0 ? (
+              <p style={{ textAlign: 'center', color: 'var(--text-muted, #94a3b8)', padding: '20px 0' }}>
+                Chưa có đơn hàng nào trong khoảng thời gian này
+              </p>
+            ) : (
+              reportData.recentOrders.map((order: any) => (
+                <div key={order._id} className={styles.mobileOrderCard}>
+                  <div className={styles.mobileOrderTop}>
+                    <Link href={`/admin/orders/${order._id}`} className={styles.mobileOrderCode}>
+                      #{order.orderCode}
+                    </Link>
+                    <span
+                      className={`${styles.badge} ${
+                        order.status === 'delivered'
+                          ? styles.badgeDelivered
+                          : order.status === 'cancelled'
+                          ? styles.badgeCancelled
+                          : order.status === 'shipping'
+                          ? styles.badgeShipping
+                          : order.status === 'confirmed'
+                          ? styles.badgeConfirmed
+                          : styles.badgePending
+                      }`}
+                    >
+                      {order.status === 'delivered'
+                        ? 'Đã giao'
+                        : order.status === 'shipping'
+                        ? 'Đang giao'
+                        : order.status === 'confirmed'
+                        ? 'Đã duyệt'
+                        : order.status === 'cancelled'
+                        ? 'Đã hủy'
+                        : 'Chờ duyệt'}
+                    </span>
+                  </div>
+                  <div className={styles.mobileOrderMid}>
+                    <span className={styles.mobileCustomerName}>
+                      {order.customer?.name || 'Khách vãng lai'}
+                    </span>
+                    <span className={styles.mobileOrderTime}>
+                      {formatDate(order.createdAt)}
+                    </span>
+                  </div>
+                  <div className={styles.mobileOrderBottom}>
+                    <span className={styles.mobileOrderLabel}>Tổng tiền:</span>
+                    <span className={styles.mobileOrderPrice}>
+                      {formatPrice(order.totalAmount)}
+                    </span>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
         </div>
 
         {/* Top 5 Products */}
@@ -406,14 +474,16 @@ export default function Dashboard() {
             ) : (
               reportData.topProducts.map((p: any, idx: number) => (
                 <div key={p._id} className={styles.productItem}>
-                  <LazyImage
-                    src={getProductCoverImage(p, '/file.svg')}
-                    alt={p.name}
-                    aspectRatio="1 / 1"
-                    style={{ width: 44, height: 44, borderRadius: 6, objectFit: 'cover' }}
-                  />
+                  <div className={styles.productImgBox}>
+                    <LazyImage
+                      src={getProductCoverImage(p, '/file.svg')}
+                      alt={p.name}
+                      aspectRatio="1 / 1"
+                      style={{ width: '100%', height: '100%', borderRadius: 6, objectFit: 'cover' }}
+                    />
+                  </div>
                   <div className={styles.productInfo}>
-                    <h4>{p.name}</h4>
+                    <h4 title={p.name}>{p.name}</h4>
                     <p>Đã bán: <strong style={{ color: 'var(--text-main, #fff)' }}>{p.soldCount || 0}</strong> chiếc</p>
                   </div>
                   <div className={styles.productRevenue}>

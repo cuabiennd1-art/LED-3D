@@ -20,6 +20,9 @@ import {
   FiCheckCircle,
   FiXCircle,
   FiRefreshCw,
+  FiFilter,
+  FiX,
+  FiBox,
 } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import { formatPrice, formatDate } from '@/lib/utils';
@@ -42,10 +45,13 @@ export default function OrdersPage() {
   const [search, setSearch] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalOrders, setTotalOrders] = useState(0);
   const [isResetting, setIsResetting] = useState(false);
+
+  const activeFiltersCount = (startDate ? 1 : 0) + (endDate ? 1 : 0);
 
   // Batch & Print states
   const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
@@ -425,30 +431,35 @@ export default function OrdersPage() {
                 setPage(1);
               }}
             />
+            {search && (
+              <button
+                type="button"
+                className={styles.clearSearchBtn}
+                onClick={() => {
+                  setSearch('');
+                  setPage(1);
+                }}
+                title="Xóa tìm kiếm"
+              >
+                ✕
+              </button>
+            )}
           </div>
 
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <span style={{ color: 'var(--text-muted, #9ca3af)', fontSize: '0.8125rem' }}>Từ:</span>
-            <input
-              type="date"
-              className={styles.dateInput}
-              value={startDate}
-              onChange={(e) => {
-                setStartDate(e.target.value);
-                setPage(1);
-              }}
-            />
-            <span style={{ color: 'var(--text-muted, #9ca3af)', fontSize: '0.8125rem' }}>Đến:</span>
-            <input
-              type="date"
-              className={styles.dateInput}
-              value={endDate}
-              onChange={(e) => {
-                setEndDate(e.target.value);
-                setPage(1);
-              }}
-            />
-          </div>
+          {/* Filter Toggle Button */}
+          <button
+            type="button"
+            className={`${styles.btnFilterToggle} ${showFilterPanel ? styles.btnFilterActive : ''} ${activeFiltersCount > 0 ? styles.hasActiveFilters : ''}`}
+            onClick={() => setShowFilterPanel(!showFilterPanel)}
+            title="Lọc đơn theo khoảng ngày"
+            aria-expanded={showFilterPanel}
+          >
+            <FiFilter size={15} />
+            <span className={styles.btnFilterText}>Lọc ngày</span>
+            {activeFiltersCount > 0 && (
+              <span className={styles.filterBadge}>{activeFiltersCount}</span>
+            )}
+          </button>
 
           {/* Reset Filters Button */}
           <button
@@ -459,26 +470,88 @@ export default function OrdersPage() {
             title="Đặt lại bộ lọc & Làm mới danh sách"
           >
             <FiRotateCcw className={isResetting ? styles.spinning : ''} />
-            <span>{isResetting ? 'Đang làm mới...' : 'Đặt lại bộ lọc'}</span>
+            <span className={styles.btnActionText}>{isResetting ? 'Đang làm mới...' : 'Đặt lại'}</span>
           </button>
 
           {/* Sync with Viettel Post Button */}
           <button
             type="button"
-            className={styles.btnReset}
-            style={{
-              background: 'rgba(234, 88, 12, 0.1)',
-              borderColor: 'rgba(234, 88, 12, 0.3)',
-              color: '#ea580c',
-            }}
+            className={styles.btnSyncVTP}
             onClick={handleSyncVTP}
             disabled={isSyncingVTP}
             title="Đồng bộ trạng thái giao hàng từ Viettel Post"
           >
-            <FiRefreshCw className={isSyncingVTP ? 'animate-spin' : ''} />
-            <span>{isSyncingVTP ? 'Đang đồng bộ...' : 'Đồng bộ VTP'}</span>
+            <FiRefreshCw className={isSyncingVTP ? styles.spinning : ''} />
+            <span className={styles.btnActionText}>{isSyncingVTP ? 'Đang đồng bộ...' : 'Đồng bộ VTP'}</span>
           </button>
         </div>
+
+        {/* Collapsible Date Filter Panel */}
+        {showFilterPanel && (
+          <div className={styles.filterPanel}>
+            <div className={styles.filterPanelHeader}>
+              <div className={styles.panelTitle}>
+                <FiFilter size={14} />
+                <span>Lọc đơn hàng theo khoảng ngày tạo</span>
+                {activeFiltersCount > 0 && (
+                  <span className={styles.activeTagBadge}>({activeFiltersCount} đang chọn)</span>
+                )}
+              </div>
+              <div className={styles.panelActions}>
+                {(activeFiltersCount > 0 || startDate || endDate) && (
+                  <button
+                    type="button"
+                    className={styles.btnResetPanel}
+                    onClick={() => {
+                      setStartDate('');
+                      setEndDate('');
+                      setPage(1);
+                    }}
+                    title="Xóa khoảng ngày"
+                  >
+                    <FiRotateCcw size={12} />
+                    <span>Xóa ngày</span>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className={styles.btnClosePanel}
+                  onClick={() => setShowFilterPanel(false)}
+                  title="Đóng bộ lọc"
+                >
+                  <FiX size={16} />
+                </button>
+              </div>
+            </div>
+
+            <div className={styles.filterGrid}>
+              <div className={styles.filterGroup}>
+                <label className={styles.filterLabel}>Từ ngày:</label>
+                <input
+                  type="date"
+                  className={styles.dateInput}
+                  value={startDate}
+                  onChange={(e) => {
+                    setStartDate(e.target.value);
+                    setPage(1);
+                  }}
+                />
+              </div>
+              <div className={styles.filterGroup}>
+                <label className={styles.filterLabel}>Đến ngày:</label>
+                <input
+                  type="date"
+                  className={styles.dateInput}
+                  value={endDate}
+                  onChange={(e) => {
+                    setEndDate(e.target.value);
+                    setPage(1);
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Sticky Batch Action Bar when orders are selected */}
         {selectedOrderIds.length > 0 && (
@@ -527,7 +600,8 @@ export default function OrdersPage() {
             <Skeleton type="table-row" count={8} />
           </div>
         ) : (
-          <div className={styles.tableResponsive}>
+          <>
+            <div className={styles.tableResponsive}>
             <table className={styles.table}>
               <thead>
                 <tr>
@@ -748,63 +822,242 @@ export default function OrdersPage() {
               </tbody>
             </table>
           </div>
+
+          {/* Mobile Orders Card View (<= 768px - ZERO horizontal scroll) */}
+          <div className={styles.mobileOrderList}>
+            {orders.length === 0 ? (
+              <div className={styles.mobileEmptyState}>
+                <FiShoppingBag size={32} style={{ color: 'var(--text-muted, #64748b)' }} />
+                <span>Không tìm thấy đơn hàng nào phù hợp với bộ lọc</span>
+              </div>
+            ) : (
+              orders.map((o) => {
+                const isSelected = selectedOrderIds.includes(o._id);
+
+                return (
+                  <div
+                    key={o._id}
+                    className={`${styles.mobileOrderCard} ${isSelected ? styles.mobileOrderCardSelected : ''}`}
+                  >
+                    {/* Header: Checkbox, Order Code, Status */}
+                    <div className={styles.mobileCardHeader}>
+                      <div className={styles.mobileHeaderLeft}>
+                        <input
+                          type="checkbox"
+                          className={styles.checkbox}
+                          checked={isSelected}
+                          onChange={() => handleToggleOrder(o._id)}
+                          title="Chọn đơn này"
+                        />
+                        <button
+                          type="button"
+                          className={styles.mobileOrderCode}
+                          onClick={() => setSelectedDetailOrderId(o._id)}
+                        >
+                          #{o.orderCode}
+                        </button>
+                      </div>
+
+                      <div className={styles.mobileHeaderRight}>
+                        <span
+                          className={`${styles.badge} ${
+                            o.status === 'delivered'
+                              ? styles.badgeDelivered
+                              : o.status === 'cancelled'
+                              ? styles.badgeCancelled
+                              : o.status === 'shipping'
+                              ? styles.badgeShipping
+                              : o.status === 'confirmed'
+                              ? styles.badgeConfirmed
+                              : styles.badgePending
+                          }`}
+                        >
+                          {o.status === 'delivered'
+                            ? 'Đã giao'
+                            : o.status === 'shipping'
+                            ? 'Đang giao'
+                            : o.status === 'confirmed'
+                            ? 'Đã duyệt'
+                            : o.status === 'cancelled'
+                            ? 'Đã hủy'
+                            : 'Chờ duyệt'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Customer & Date */}
+                    <div className={styles.mobileCustomerRow}>
+                      <div className={styles.mobileCustomerInfo}>
+                        <strong className={styles.mobileCustomerName}>
+                          {o.customer?.name || 'Khách hàng'}
+                        </strong>
+                        {o.customer?.phone && (
+                          <span className={styles.mobileCustomerPhone}>{o.customer.phone}</span>
+                        )}
+                      </div>
+                      <span className={styles.mobileOrderDate}>{formatDate(o.createdAt)}</span>
+                    </div>
+
+                    {/* Product Summary */}
+                    <div className={styles.mobileProductSummary}>
+                      <div className={styles.mobileProductCount}>
+                        <FiBox size={13} />
+                        <span>{o.items?.length || 0} sản phẩm</span>
+                      </div>
+                      {o.items?.[0] && (
+                        <div className={styles.mobileProductSnippet}>
+                          {o.items[0].name}
+                          {formatVariantDisplay(o.items[0]) ? ` (${formatVariantDisplay(o.items[0])})` : ''}
+                          {o.items.length > 1 ? ` (+${o.items.length - 1} món khác)` : ''}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Payment Info & Total Amount */}
+                    <div className={styles.mobilePaymentRow}>
+                      <div className={styles.mobilePaymentMeta}>
+                        <span
+                          className={styles.mobilePaymentStatus}
+                          style={{
+                            color: o.paymentStatus === 'paid' ? '#10b981' : '#f59e0b',
+                          }}
+                        >
+                          {o.paymentStatus === 'paid' ? '● Đã thanh toán' : '○ Chưa thanh toán'}
+                        </span>
+                        <span className={styles.mobilePaymentMethod}>
+                          ({o.paymentMethod === 'bank_transfer' ? 'VietQR' : 'COD'})
+                        </span>
+                      </div>
+
+                      <div className={styles.mobileTotalPrice}>
+                        {formatPrice(o.totalAmount)}
+                      </div>
+                    </div>
+
+                    {/* Mobile Quick Action Buttons */}
+                    <div className={styles.mobileCardActions}>
+                      <button
+                        type="button"
+                        className={styles.mobileActionBtn}
+                        onClick={() => handlePrintSingle(o)}
+                        title="In phiếu A6"
+                        style={{ color: '#38bdf8' }}
+                      >
+                        <FiPrinter size={14} />
+                        <span>In phiếu A6</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        className={styles.mobileActionBtn}
+                        onClick={() => setSelectedDetailOrderId(o._id)}
+                        title="Chi tiết"
+                      >
+                        <FiEye size={14} />
+                        <span>Chi tiết</span>
+                      </button>
+
+                      {o.status === 'pending' && (
+                        <button
+                          type="button"
+                          className={`${styles.mobileActionBtn} ${styles.mobileBtnSuccess}`}
+                          onClick={() => handleUpdateStatus(o._id, 'confirmed', false, o.orderCode)}
+                          title="Duyệt đơn hàng"
+                        >
+                          <FiCheck size={14} />
+                          <span>Duyệt</span>
+                        </button>
+                      )}
+
+                      {o.status === 'confirmed' && (
+                        <button
+                          type="button"
+                          className={`${styles.mobileActionBtn} ${styles.mobileBtnShipping}`}
+                          onClick={() => setShippingTargetOrder(o)}
+                          title="Giao hàng sang hãng"
+                        >
+                          <FiTruck size={14} />
+                          <span>Giao hàng</span>
+                        </button>
+                      )}
+
+                      {(o.status === 'shipping' || o.status === 'delivering') && (
+                        <button
+                          type="button"
+                          className={`${styles.mobileActionBtn} ${styles.mobileBtnSuccess}`}
+                          onClick={() =>
+                            setDeliverTarget({
+                              id: o._id,
+                              code: o.orderCode,
+                              isCod: o.paymentMethod === 'cod',
+                              totalAmount: o.totalAmount,
+                            })
+                          }
+                          title="Xác nhận giao thành công"
+                        >
+                          <FiCheckCircle size={14} />
+                          <span>Đã giao</span>
+                        </button>
+                      )}
+
+                      {o.status !== 'cancelled' && o.status !== 'delivered' && (
+                        <button
+                          type="button"
+                          className={`${styles.mobileActionBtn} ${styles.mobileBtnDanger}`}
+                          onClick={() =>
+                            setCancelTarget({
+                              id: o._id,
+                              code: o.orderCode,
+                              trackingCode: o.trackingCode,
+                              carrier: o.shippingCarrier || o.shippingProvider,
+                            })
+                          }
+                          title="Hủy đơn hàng"
+                        >
+                          <FiXCircle size={14} />
+                          <span>Hủy</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+          </>
         )}
 
         {/* Pagination Bar */}
         {totalPages > 1 && (
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderTop: '1px solid var(--border-color, #232838)', flexWrap: 'wrap', gap: 12 }}>
-            <span style={{ fontSize: '0.875rem', color: 'var(--text-muted, #9ca3af)' }}>
-              Trang <strong>{page}</strong> / <strong>{totalPages}</strong> (Hiển thị {orders.length} trên tổng số {totalOrders} đơn hàng)
+          <div className={styles.pagination}>
+            <span className={styles.paginationInfo}>
+              Trang <strong>{page}</strong> / <strong>{totalPages}</strong> (Hiển thị {orders.length} trên tổng {totalOrders} đơn)
             </span>
-            <div style={{ display: 'flex', gap: 8 }}>
+            <div className={styles.paginationControls}>
               <button
                 disabled={page <= 1}
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
-                style={{
-                  padding: '6px 14px',
-                  borderRadius: 'var(--radius-sm, 6px)',
-                  background: 'var(--bg-main, #090a0f)',
-                  color: 'var(--text-main, #fff)',
-                  border: '1px solid var(--border-color, #232838)',
-                  cursor: page <= 1 ? 'not-allowed' : 'pointer',
-                  opacity: page <= 1 ? 0.4 : 1,
-                  fontWeight: 600,
-                }}
+                className={styles.pageNavBtn}
               >
                 ← Trước
               </button>
 
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((pNum) => (
-                <button
-                  key={pNum}
-                  onClick={() => setPage(pNum)}
-                  style={{
-                    padding: '6px 12px',
-                    borderRadius: 'var(--radius-sm, 6px)',
-                    background: page === pNum ? 'var(--primary, #3b82f6)' : 'var(--bg-main, #090a0f)',
-                    color: page === pNum ? 'var(--primary-text, #fff)' : 'var(--text-main, #fff)',
-                    border: '1px solid var(--border-color, #232838)',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                  }}
-                >
-                  {pNum}
-                </button>
-              ))}
+              <div className={styles.pageNumbersList}>
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((pNum) => (
+                  <button
+                    key={pNum}
+                    onClick={() => setPage(pNum)}
+                    className={`${styles.pageNumberBtn} ${page === pNum ? styles.activePageNumberBtn : ''}`}
+                  >
+                    {pNum}
+                  </button>
+                ))}
+              </div>
 
               <button
                 disabled={page >= totalPages}
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                style={{
-                  padding: '6px 14px',
-                  borderRadius: 'var(--radius-sm, 6px)',
-                  background: 'var(--bg-main, #090a0f)',
-                  color: 'var(--text-main, #fff)',
-                  border: '1px solid var(--border-color, #232838)',
-                  cursor: page >= totalPages ? 'not-allowed' : 'pointer',
-                  opacity: page >= totalPages ? 0.4 : 1,
-                  fontWeight: 600,
-                }}
+                className={styles.pageNavBtn}
               >
                 Sau →
               </button>

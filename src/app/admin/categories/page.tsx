@@ -177,77 +177,132 @@ export default function CategoriesAdminPage() {
           </div>
         </div>
 
-        {/* Categories Table */}
+        {/* Categories Table (Desktop) & Cards (Mobile) */}
         {loading ? (
           <div style={{ padding: 16 }}>
             <Skeleton type="table-row" count={5} />
           </div>
         ) : (
-          <div className={styles.tableResponsive}>
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <th style={{ width: 80 }}>Thứ tự</th>
-                  <th>Tên danh mục</th>
-                  <th>Đường dẫn (Slug)</th>
-                  <th>Mô tả</th>
-                  <th>Số sản phẩm</th>
-                  <th style={{ textAlign: 'right' }}>Thao tác</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredCategories.length === 0 ? (
+          <>
+            {/* Desktop Table View (>= 769px) */}
+            <div className={styles.tableResponsive}>
+              <table className={styles.table}>
+                <thead>
                   <tr>
-                    <td colSpan={6} style={{ textAlign: 'center', color: 'var(--text-muted, #9ca3af)', padding: 40 }}>
-                      Không tìm thấy danh mục nào phù hợp
-                    </td>
+                    <th style={{ width: 80 }}>Thứ tự</th>
+                    <th>Tên danh mục</th>
+                    <th>Đường dẫn (Slug)</th>
+                    <th>Mô tả</th>
+                    <th>Số sản phẩm</th>
+                    <th style={{ textAlign: 'right' }}>Thao tác</th>
                   </tr>
-                ) : (
-                  filteredCategories.map((cat) => (
-                    <tr key={cat._id}>
-                      <td>
-                        <span className={styles.orderBadge}>#{cat.order ?? 0}</span>
-                      </td>
-                      <td>
-                        <strong style={{ color: 'var(--text-main, #ffffff)', fontSize: '0.9375rem' }}>{cat.name}</strong>
-                      </td>
-                      <td>
-                        <span className={styles.slugCode}>{cat.slug}</span>
-                      </td>
-                      <td style={{ color: 'var(--text-muted, #94a3b8)', maxWidth: 260 }}>
-                        {cat.description || '-'}
-                      </td>
-                      <td>
-                        <span className={styles.countBadge}>
-                          <FiBox /> {cat.productCount || 0} sản phẩm
-                        </span>
-                      </td>
-                      <td>
-                        <div className={styles.actions} style={{ justifyContent: 'flex-end' }}>
-                          <button
-                            type="button"
-                            className={styles.actionBtn}
-                            onClick={() => handleOpenEdit(cat)}
-                            title="Chỉnh sửa danh mục"
-                          >
-                            <FiEdit2 />
-                          </button>
-                          <button
-                            type="button"
-                            className={`${styles.actionBtn} ${styles.dangerBtn}`}
-                            onClick={() => setDeleteTarget({ id: cat._id, name: cat.name })}
-                            title="Xóa danh mục"
-                          >
-                            <FiTrash2 />
-                          </button>
-                        </div>
+                </thead>
+                <tbody>
+                  {filteredCategories.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} style={{ textAlign: 'center', color: 'var(--text-muted, #9ca3af)', padding: 40 }}>
+                        Không tìm thấy danh mục nào phù hợp
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                  ) : (
+                    filteredCategories.map((cat) => (
+                      <tr key={cat._id}>
+                        <td>
+                          <span className={styles.orderBadge}>#{cat.order ?? 0}</span>
+                        </td>
+                        <td>
+                          <strong style={{ color: 'var(--text-main, #ffffff)', fontSize: '0.9375rem' }}>{cat.name}</strong>
+                        </td>
+                        <td>
+                          <span className={styles.slugCode}>{cat.slug}</span>
+                        </td>
+                        <td style={{ color: 'var(--text-muted, #94a3b8)', maxWidth: 260 }}>
+                          {cat.description || '-'}
+                        </td>
+                        <td>
+                          <span className={styles.countBadge}>
+                            <FiBox /> {cat.productCount || 0} sản phẩm
+                          </span>
+                        </td>
+                        <td>
+                          <div className={styles.actions} style={{ justifyContent: 'flex-end' }}>
+                            <button
+                              type="button"
+                              className={styles.actionBtn}
+                              onClick={() => handleOpenEdit(cat)}
+                              title="Chỉnh sửa danh mục"
+                            >
+                              <FiEdit2 />
+                            </button>
+                            <button
+                              type="button"
+                              className={`${styles.actionBtn} ${styles.dangerBtn}`}
+                              onClick={() => setDeleteTarget({ id: cat._id, name: cat.name })}
+                              title="Xóa danh mục"
+                            >
+                              <FiTrash2 />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Category Cards View (<= 768px - ZERO horizontal scroll) */}
+            <div className={styles.mobileCategoryList}>
+              {filteredCategories.length === 0 ? (
+                <div className={styles.emptyMobile}>
+                  <FiFolder size={32} style={{ color: 'var(--text-muted, #64748b)' }} />
+                  <span>Không tìm thấy danh mục nào phù hợp</span>
+                </div>
+              ) : (
+                filteredCategories.map((cat) => (
+                  <div key={cat._id} className={styles.categoryCard}>
+                    <div className={styles.categoryCardHeader}>
+                      <div className={styles.categoryCardTitleArea}>
+                        <span className={styles.orderBadge}>#{cat.order ?? 0}</span>
+                        <strong className={styles.categoryCardName}>{cat.name}</strong>
+                      </div>
+                      <div className={styles.actions}>
+                        <button
+                          type="button"
+                          className={styles.actionBtn}
+                          onClick={() => handleOpenEdit(cat)}
+                          title="Chỉnh sửa danh mục"
+                        >
+                          <FiEdit2 size={15} />
+                        </button>
+                        <button
+                          type="button"
+                          className={`${styles.actionBtn} ${styles.dangerBtn}`}
+                          onClick={() => setDeleteTarget({ id: cat._id, name: cat.name })}
+                          title="Xóa danh mục"
+                        >
+                          <FiTrash2 size={15} />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className={styles.categoryCardMeta}>
+                      <span className={styles.slugCode}>{cat.slug || cat._id}</span>
+                      <span className={styles.countBadge}>
+                        <FiBox size={13} /> {cat.productCount || 0} sản phẩm
+                      </span>
+                    </div>
+
+                    {cat.description && (
+                      <p className={styles.categoryCardDesc}>
+                        {cat.description}
+                      </p>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+          </>
         )}
       </div>
 

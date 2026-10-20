@@ -52,9 +52,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { name: '🎟️ Mã Giảm Giá', icon: FiGift, path: '/admin/marketing/vouchers' },
     { name: 'Khách hàng', icon: FiUsers, path: '/admin/customers' },
     { name: 'Báo cáo', icon: FiBarChart2, path: '/admin/reports' },
-    { name: 'Vận chuyển', icon: FiTruck, path: '/admin/shipping' },
-    { name: 'Marketing', icon: FiTarget, path: '/admin/marketing' },
-    { name: 'Thanh toán', icon: FiCreditCard, path: '/admin/payment' },
+    // { name: 'Vận chuyển', icon: FiTruck, path: '/admin/shipping' },
+    // { name: 'Marketing', icon: FiTarget, path: '/admin/marketing' },
+    // { name: 'Thanh toán', icon: FiCreditCard, path: '/admin/payment' },
     { name: 'Cài đặt giao diện', icon: FiSettings, path: '/admin/settings' },
   ];
 

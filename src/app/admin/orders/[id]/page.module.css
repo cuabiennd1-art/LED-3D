@@ -31,4 +31,51 @@
 .summaryRow { display: flex; justify-content: space-between; margin-bottom: 8px; color: var(--admin-text-muted); }
 .totalRow { font-size: 1.125rem; font-weight: 600; color: var(--admin-text); border-top: 1px solid var(--admin-border); padding-top: 16px; margin-top: 8px; }
 .infoText { margin: 0 0 8px; }
-@media (max-width: 768px) { .grid { grid-template-columns: 1fr; } .timeline::before { display: none; } }
+@media (max-width: 768px) {
+  .page {
+    gap: 16px;
+  }
+  .header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  .titleGroup {
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .title {
+    font-size: 1.2rem;
+  }
+  .actions {
+    width: 100%;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .btnPrimary,
+  .btnDanger {
+    flex: 1;
+    justify-content: center;
+    padding: 8px 12px;
+    font-size: 0.8125rem;
+  }
+  .grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .timeline {
+    padding: 16px 12px;
+    overflow-x: auto;
+    gap: 8px;
+  }
+  .timeline::before {
+    display: none;
+  }
+  .stepText {
+    font-size: 0.75rem;
+    text-align: center;
+  }
+  .card {
+    padding: 16px;
+  }
+}

@@ -371,7 +371,12 @@
   padding: 24px;
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   min-height: 0;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
 }
@@ -411,12 +416,55 @@
     z-index: 90;
   }
 
-  .pinAppBtn span {
+  .pinAppBtn {
     display: none;
   }
 
-  .pinAppBtn {
+  .header {
+    height: 56px;
+    padding: 0 12px;
+  }
+
+  .headerLeft {
+    gap: 10px;
+  }
+
+  .breadcrumbStore,
+  .breadcrumbSep {
+    display: none;
+  }
+
+  .headerRight {
+    gap: 8px;
+  }
+
+  .viewStoreBtn {
     padding: 6px 8px;
+  }
+
+  .viewStoreBtn span {
+    display: none;
+  }
+
+  .userInfo {
+    padding: 0;
+    background: transparent;
+    border: none;
+  }
+
+  .userDetails {
+    display: none;
+  }
+
+  .logoutBtnHeader {
+    display: none;
+  }
+
+  .content {
+    padding: 14px 12px;
+    display: block;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
 }
 

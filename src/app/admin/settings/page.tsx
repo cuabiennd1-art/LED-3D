@@ -1853,33 +1853,19 @@ export default function AdminSettingsPage() {
                   <p style={{ fontSize: 12, color: 'var(--text-muted, #94a3b8)', margin: '0 0 12px 0' }}>
                     Nhập địa chỉ email của bạn để gửi một bức thư thử nghiệm và đảm bảo cấu hình hoạt động hoàn hảo.
                   </p>
-                  <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                  <div className={styles.emailTestRow}>
                     <input
                       type="email"
                       className={styles.input}
                       placeholder="Nhập email nhận thư test..."
                       value={testEmailTarget}
                       onChange={(e) => setTestEmailTarget(e.target.value)}
-                      style={{ flex: 1, minWidth: 240 }}
                     />
                     <button
                       type="button"
+                      className={styles.emailTestBtn}
                       onClick={handleSendTestEmail}
                       disabled={testingEmail || !emailForm.user || !emailForm.pass}
-                      style={{
-                        background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                        color: '#fff',
-                        border: 'none',
-                        padding: '10px 20px',
-                        borderRadius: 8,
-                        fontWeight: 700,
-                        fontSize: 13,
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 6,
-                        opacity: testingEmail || !emailForm.user || !emailForm.pass ? 0.6 : 1,
-                      }}
                     >
                       <FiSend /> {testingEmail ? 'Đang gửi test...' : 'Gửi Thử Email'}
                     </button>
@@ -1968,7 +1954,7 @@ export default function AdminSettingsPage() {
                   type="submit"
                   className={styles.saveBtn}
                   disabled={changingPassword}
-                  style={{ alignSelf: 'flex-start', marginTop: 8 }}
+                  style={{ marginTop: 8 }}
                 >
                   <FiLock /> {changingPassword ? 'Đang cập nhật...' : 'Cập Nhật Mật Khẩu'}
                 </button>

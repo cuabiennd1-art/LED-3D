@@ -49,6 +49,12 @@ export default function ProductDetailModal({ productId, onClose }: ProductDetail
     fetchDetail();
   }, [productId]);
 
+  const handleCopySku = (sku: string) => {
+    if (!sku) return;
+    navigator.clipboard.writeText(sku);
+    toast.success(`Đã sao chép SKU: ${sku}`);
+  };
+
   if (!productId) return null;
 
   const discountPercent =
@@ -59,46 +65,64 @@ export default function ProductDetailModal({ productId, onClose }: ProductDetail
   const imagesList = product?.images && product.images.length > 0 ? product.images : ['/file.svg'];
   const activeImage = imagesList[selectedImgIndex] || imagesList[0];
 
+  const totalStock =
+    Array.isArray(product?.variants) && product.variants.length > 0
+      ? product.variants.reduce((sum: number, v: any) => sum + (Number(v.stock) || 0), 0)
+      : Number(product?.stock) || 0;
+
   return (
     <div className={styles.overlay} onClick={onClose}>
       <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-        {/* Modal Header */}
+        {/* Modal Header: Clean 1-line bar */}
         <div className={styles.header}>
-          <div className={styles.titleArea}>
-            <h2 className={styles.title}>{loading ? 'Đang tải thông tin...' : product?.name}</h2>
+          <div className={styles.headerLeft}>
+            <span className={styles.headerTitle}>Chi tiết sản phẩm</span>
             {product && (
-              <>
-                <span className={product.status === 'active' ? styles.badgeActive : styles.badgeHidden}>
-                  {product.status === 'active' ? 'Đang mở bán' : 'Đã ẩn'}
-                </span>
-                {product.isFeatured && <span className={styles.badgeFeatured}>★ Nổi bật</span>}
-              </>
+              <span className={product.status === 'active' ? styles.badgeActive : styles.badgeHidden}>
+                {product.status === 'active' ? 'Đang mở bán' : 'Đã ẩn'}
+              </span>
             )}
           </div>
           <button className={styles.closeBtn} onClick={onClose} title="Đóng">
-            <FiX />
+            <FiX size={18} />
           </button>
         </div>
 
         {/* Modal Body */}
         <div className={styles.body}>
           {loading ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: 24 }}>
-                <Skeleton type="rect" height={320} borderRadius="10px" />
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  <Skeleton type="text" height={30} width="80%" />
-                  <Skeleton type="rect" height={80} borderRadius="10px" />
-                  <Skeleton type="rect" height={100} borderRadius="10px" />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <Skeleton type="text" height={28} width="70%" />
+              <div className={styles.topGrid}>
+                <Skeleton type="rect" height={220} borderRadius="10px" />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <Skeleton type="rect" height={60} borderRadius="8px" />
+                  <Skeleton type="rect" height={70} borderRadius="8px" />
+                  <Skeleton type="rect" height={80} borderRadius="8px" />
                 </div>
               </div>
               <Skeleton type="table-row" count={3} />
             </div>
           ) : product ? (
             <>
+              {/* Product Heading: Name + Category badge */}
+              <div className={styles.productHeading}>
+                <h2 className={styles.productName}>{product.name}</h2>
+                <div className={styles.productBadges}>
+                  {product.category && (
+                    <span className={styles.categoryBadge}>
+                      📁 {product.category?.name || product.category}
+                    </span>
+                  )}
+                  {product.isFeatured && (
+                    <span className={styles.badgeFeatured}>★ Nổi bật</span>
+                  )}
+                </div>
+              </div>
+
               {/* Top Grid: Gallery & Information */}
               <div className={styles.topGrid}>
-                {/* Left: Image Gallery */}
+                {/* Left: Image / Video Gallery */}
                 <div className={styles.gallery}>
                   <div className={styles.mainImageWrapper}>
                     {isVideoUrl(activeImage) ? (
@@ -108,14 +132,14 @@ export default function ProductDetailModal({ productId, onClose }: ProductDetail
                         autoPlay
                         muted
                         playsInline
-                        style={{ width: '100%', height: '100%', objectFit: 'contain', background: '#000' }}
+                        className={styles.mainVideo}
                       />
                     ) : (
                       <LazyImage
                         src={activeImage}
                         alt={product.name}
                         aspectRatio="1 / 1"
-                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        style={{ width: '100%', height: '100%', objectFit: 'contain' }}
                       />
                     )}
                   </div>
@@ -129,21 +153,7 @@ export default function ProductDetailModal({ productId, onClose }: ProductDetail
                           onClick={() => setSelectedImgIndex(idx)}
                         >
                           {isVideoUrl(img) ? (
-                            <div
-                              style={{
-                                width: '100%',
-                                height: '100%',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                background: '#1e293b',
-                                color: '#fff',
-                                fontSize: 11,
-                                fontWeight: 700,
-                              }}
-                            >
-                              ▶ Video
-                            </div>
+                            <div className={styles.videoThumbBadge}>▶ Video</div>
                           ) : (
                             <img
                               src={img}
@@ -161,61 +171,26 @@ export default function ProductDetailModal({ productId, onClose }: ProductDetail
                 <div className={styles.infoCol}>
                   {/* Price Card */}
                   <div className={styles.priceCard}>
-                    <span className={styles.currentPrice}>
-                      {formatPrice(product.salePrice || product.price)}
-                    </span>
-                    {product.salePrice && (
-                      <>
+                    <div className={styles.priceRow}>
+                      <span className={styles.currentPrice}>
+                        {formatPrice(product.salePrice || product.price)}
+                      </span>
+                      {product.salePrice && product.salePrice < product.price && (
                         <span className={styles.oldPrice}>{formatPrice(product.price)}</span>
-                        {discountPercent && <span className={styles.discountBadge}>Tiết kiệm {discountPercent}%</span>}
-                      </>
+                      )}
+                    </div>
+                    {discountPercent && (
+                      <span className={styles.discountBadge}>Tiết kiệm {discountPercent}%</span>
                     )}
-                  </div>
-
-                  {/* Meta Details */}
-                  <div className={styles.metaList}>
-                    <div className={styles.metaItem}>
-                      <span className={styles.metaLabel}>Mã định danh (ID)</span>
-                      <span className={styles.metaValue} style={{ fontSize: '0.8125rem' }}>{product._id}</span>
-                    </div>
-
-                    <div className={styles.metaItem}>
-                      <span className={styles.metaLabel}>Đường dẫn (Slug)</span>
-                      <span className={styles.metaValue} style={{ color: 'var(--primary, #3b82f6)' }}>
-                        {product.slug || '-'}
-                      </span>
-                    </div>
-
-                    <div className={styles.metaItem}>
-                      <span className={styles.metaLabel}>Danh mục</span>
-                      <span className={styles.metaValue}>
-                        {product.category?.name || product.category || 'Chưa phân loại'}
-                      </span>
-                    </div>
-
-                    <div className={styles.metaItem}>
-                      <span className={styles.metaLabel}>Ngày khởi tạo</span>
-                      <span className={styles.metaValue}>
-                        {product.createdAt ? formatDate(product.createdAt) : '-'}
-                      </span>
-                    </div>
                   </div>
 
                   {/* Stats Row */}
                   <div className={styles.statsRow}>
                     <div className={styles.statBox}>
-                      {(() => {
-                        const totalStock =
-                          Array.isArray(product.variants) && product.variants.length > 0
-                            ? product.variants.reduce((sum: number, v: any) => sum + (Number(v.stock) || 0), 0)
-                            : Number(product.stock) || 0;
-                        return (
-                          <span className={styles.statNum} style={{ color: totalStock < 10 ? '#ef4444' : '#10b981' }}>
-                            {totalStock}
-                          </span>
-                        );
-                      })()}
-                      <span className={styles.statTitle}>Tồn kho hiện tại</span>
+                      <span className={styles.statNum} style={{ color: totalStock < 10 ? '#ef4444' : '#10b981' }}>
+                        {totalStock}
+                      </span>
+                      <span className={styles.statTitle}>Tồn kho</span>
                     </div>
 
                     <div className={styles.statBox}>
@@ -229,7 +204,31 @@ export default function ProductDetailModal({ productId, onClose }: ProductDetail
                       <span className={styles.statNum}>
                         {product.variants ? product.variants.length : 0}
                       </span>
-                      <span className={styles.statTitle}>Phân loại biến thể</span>
+                      <span className={styles.statTitle}>Biến thể</span>
+                    </div>
+                  </div>
+
+                  {/* Meta Details */}
+                  <div className={styles.metaList}>
+                    <div className={styles.metaItem}>
+                      <span className={styles.metaLabel}>Danh mục</span>
+                      <span className={styles.metaValue}>
+                        {product.category?.name || product.category || 'Chưa phân loại'}
+                      </span>
+                    </div>
+
+                    <div className={styles.metaItem}>
+                      <span className={styles.metaLabel}>Ngày tạo</span>
+                      <span className={styles.metaValue}>
+                        {product.createdAt ? formatDate(product.createdAt) : '-'}
+                      </span>
+                    </div>
+
+                    <div className={styles.metaItemFull}>
+                      <span className={styles.metaLabel}>Đường dẫn (Slug)</span>
+                      <span className={styles.slugValue} title={product.slug}>
+                        /{product.slug || product._id}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -238,56 +237,81 @@ export default function ProductDetailModal({ productId, onClose }: ProductDetail
               {/* Variants Section */}
               {product.variants && product.variants.length > 0 && (
                 <div className={styles.section}>
-                  <h3 className={styles.sectionTitle}>Bảng Chi Tiết Biến Thể Sản Phẩm ({product.variants.length})</h3>
-                  <div className={styles.tableWrap}>
+                  <h3 className={styles.sectionTitle}>
+                    Bảng phân loại biến thể ({product.variants.length})
+                  </h3>
+
+                  {/* Desktop Table View (>= 769px) */}
+                  <div className={styles.desktopTableWrap}>
                     <table className={styles.variantTable}>
                       <thead>
                         <tr>
-                          <th>Tên phân loại / Biến thể</th>
-                          <th>Mã SKU</th>
-                          <th>Giá biến thể</th>
-                          <th>Tồn kho</th>
+                          <th style={{ width: '40%' }}>Tên biến thể</th>
+                          <th style={{ width: '30%' }}>Mã SKU</th>
+                          <th style={{ width: '18%', textAlign: 'right' }}>Giá bán</th>
+                          <th style={{ width: '12%', textAlign: 'center' }}>Tồn kho</th>
                         </tr>
                       </thead>
                       <tbody>
                         {product.variants.map((v: any, i: number) => {
                           const attrs = v.attributes instanceof Map ? Object.fromEntries(v.attributes) : (v.attributes || {});
                           const title = v.title || v.name || Object.values(attrs).filter(Boolean).join(' / ') || [v.color, v.size].filter(Boolean).join(' / ') || `Biến thể ${i + 1}`;
+                          const stockCount = Number(v.stock) || 0;
+                          const variantPrice = v.salePrice || v.price || product.salePrice || product.price;
+
+                          // Deduplicate attrs if only 1 attr and val === title
+                          const showAttrs = Object.entries(attrs).filter(([k, val]: any) => {
+                            if (Object.keys(attrs).length === 1 && String(val).trim() === String(title).trim()) {
+                              return false;
+                            }
+                            return true;
+                          });
 
                           return (
                             <tr key={i}>
                               <td>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                                   <strong className={styles.variantTitle}>{title}</strong>
-                                  {Object.keys(attrs).length > 0 ? (
+                                  {showAttrs.length > 0 && (
                                     <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                                      {Object.entries(attrs).map(([k, val]: any) => (
+                                      {showAttrs.map(([k, val]: any) => (
                                         <span key={k} className={styles.attributeBadge}>
                                           {k}: {val}
                                         </span>
                                       ))}
                                     </div>
-                                  ) : (v.color || v.size) ? (
-                                    <span className={styles.attributeFallback}>
-                                      {[v.color, v.size].filter(Boolean).join(' - ')}
-                                    </span>
-                                  ) : null}
+                                  )}
                                 </div>
                               </td>
-                              <td className={styles.skuCell}>
-                                {v.sku || '-'}
-                              </td>
-                              <td style={{ color: 'var(--primary, #3b82f6)', fontWeight: 600 }}>
-                                {formatPrice(v.salePrice || v.price || product.salePrice || product.price)}
-                                {v.salePrice && v.price && v.salePrice < v.price && (
-                                  <span style={{ textDecoration: 'line-through', color: 'var(--text-muted, #64748b)', fontSize: '0.75rem', marginLeft: 6 }}>
-                                    {formatPrice(v.price)}
+                              <td>
+                                {v.sku ? (
+                                  <span
+                                    className={styles.skuBadge}
+                                    title={`Bấm để sao chép SKU: ${v.sku}`}
+                                    onClick={() => handleCopySku(v.sku)}
+                                  >
+                                    {v.sku}
                                   </span>
+                                ) : (
+                                  <span className={styles.skuEmpty}>-</span>
                                 )}
                               </td>
-                              <td>
-                                <span style={{ color: (v.stock || 0) < 5 ? '#ef4444' : 'var(--text-main, #ffffff)', fontWeight: 600 }}>
-                                  {v.stock ?? 0} sản phẩm
+                              <td style={{ textAlign: 'right' }}>
+                                <span className={styles.tablePrice}>
+                                  {formatPrice(variantPrice)}
+                                </span>
+                              </td>
+                              <td style={{ textAlign: 'center' }}>
+                                <span
+                                  className={
+                                    stockCount <= 0
+                                      ? styles.tableStockOut
+                                      : stockCount < 5
+                                        ? styles.tableStockLow
+                                        : styles.tableStockOk
+                                  }
+                                >
+                                  {stockCount}
                                 </span>
                               </td>
                             </tr>
@@ -296,51 +320,74 @@ export default function ProductDetailModal({ productId, onClose }: ProductDetail
                       </tbody>
                     </table>
                   </div>
+
+                  {/* Mobile Fluid Cards View (<= 768px - ZERO horizontal scroll) */}
+                  <div className={styles.mobileVariantList}>
+                    {product.variants.map((v: any, i: number) => {
+                      const attrs = v.attributes instanceof Map ? Object.fromEntries(v.attributes) : (v.attributes || {});
+                      const title = v.title || v.name || Object.values(attrs).filter(Boolean).join(' / ') || [v.color, v.size].filter(Boolean).join(' / ') || `Biến thể ${i + 1}`;
+                      const stockCount = Number(v.stock) || 0;
+                      const variantPrice = v.salePrice || v.price || product.salePrice || product.price;
+
+                      return (
+                        <div key={i} className={styles.mobileVariantCard}>
+                          <div className={styles.mobileVariantTop}>
+                            <span className={styles.mobileVariantName}>{title}</span>
+                            <span
+                              className={
+                                stockCount <= 0
+                                  ? styles.mobileStockOut
+                                  : stockCount < 5
+                                    ? styles.mobileStockLow
+                                    : styles.mobileStockOk
+                              }
+                            >
+                              {stockCount <= 0 ? 'Hết hàng' : `Kho: ${stockCount}`}
+                            </span>
+                          </div>
+
+                          {Object.keys(attrs).length > 0 && (
+                            <div className={styles.mobileVariantAttrs}>
+                              {Object.entries(attrs).map(([k, val]: any) => (
+                                <span key={k} className={styles.attributeBadge}>
+                                  {k}: {val}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+
+                          <div className={styles.mobileVariantBottom}>
+                            <div className={styles.mobileVariantSku}>
+                              <span className={styles.mobileSkuLabel}>SKU:</span>
+                              <span className={styles.mobileSkuCode}>{v.sku || '-'}</span>
+                            </div>
+                            <div className={styles.mobileVariantPrice}>
+                              {formatPrice(variantPrice)}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
 
               {/* Description Section */}
-              <div className={styles.section}>
-                <h3 className={styles.sectionTitle}>Mô Tả Sản Phẩm</h3>
-                {product.description?.trim() ? (
-                  /<\/?(p|div|br|img|video|source|iframe|h[1-6]|ul|ol|li|span|table|hr|s|blockquote|strong|b|em|i)\b/i.test(product.description) ? (
-                    <div
-                      className={styles.descriptionBox}
-                      dangerouslySetInnerHTML={{ __html: sanitizeAndTransformRichDescription(product.description) }}
-                    />
-                  ) : (
-                    <div className={styles.descriptionBox} style={{ whiteSpace: 'pre-line' }}>
-                      {product.description}
-                    </div>
-                  )
-                ) : (
-                  <div className={styles.descriptionBox} style={{ fontStyle: 'italic', color: 'var(--text-muted)' }}>
-                    Chưa có mô tả chi tiết cho sản phẩm này.
-                  </div>
-                )}
-              </div>
+              {product.description?.trim() && (
+                <div className={styles.section}>
+                  <h3 className={styles.sectionTitle}>Mô tả sản phẩm</h3>
+                  <div
+                    className={styles.descriptionBox}
+                    dangerouslySetInnerHTML={{ __html: sanitizeAndTransformRichDescription(product.description) }}
+                  />
+                </div>
+              )}
             </>
           ) : null}
         </div>
 
-        {/* Modal Footer */}
-        {product && (
-          <div className={styles.footer}>
-            <Link
-              href={`/product/${product.slug || product._id}`}
-              target="_blank"
-              className={styles.viewStoreBtn}
-            >
-              <FiExternalLink /> Xem trên Cửa Hàng
-            </Link>
+        {/* Modal Footer: Compact 1-Row */}
 
-            <div className={styles.btnGroup}>
-              <Link href={`/admin/products/${product._id}/edit`} className={styles.editBtn}>
-                <FiEdit2 /> Chỉnh Sửa Sản Phẩm
-              </Link>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

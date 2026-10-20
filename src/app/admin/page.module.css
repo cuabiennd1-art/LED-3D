@@ -2,6 +2,11 @@
   display: flex;
   flex-direction: column;
   gap: 24px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  overflow-x: hidden;
 }
 
 .header {
@@ -39,6 +44,12 @@
   padding: 4px;
   border-radius: var(--radius-md, 8px);
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.periodGroup::-webkit-scrollbar {
+  display: none;
 }
 
 .periodBtn {
@@ -131,8 +142,12 @@
 /* Charts Grid */
 .chartsGrid {
   display: grid;
-  grid-template-columns: 2fr 1fr;
+  grid-template-columns: minmax(0, 1.8fr) minmax(0, 1.2fr);
   gap: 20px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .chartCard {
@@ -142,6 +157,11 @@
   border: 1px solid var(--border-color, #232838);
   display: flex;
   flex-direction: column;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .cardHeader {
@@ -149,6 +169,8 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
+  gap: 12px;
+  min-width: 0;
 }
 
 .cardHeader h3 {
@@ -156,19 +178,30 @@
   font-size: 1.125rem;
   font-weight: 700;
   color: var(--text-main, #ffffff);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
 }
 
 .chartContainer {
   height: 300px;
   position: relative;
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
 }
 
 /* Tables Grid */
 .tablesGrid {
   display: grid;
-  grid-template-columns: 2fr 1fr;
+  grid-template-columns: minmax(0, 1.8fr) minmax(0, 1.2fr);
   gap: 20px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .card {
@@ -176,6 +209,11 @@
   padding: 20px;
   border-radius: var(--radius-lg, 12px);
   border: 1px solid var(--border-color, #232838);
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .link {
@@ -184,6 +222,8 @@
   font-size: 0.875rem;
   font-weight: 600;
   transition: opacity 0.2s;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .link:hover {
@@ -192,11 +232,27 @@
 }
 
 .tableResponsive {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  display: block;
+  box-sizing: border-box;
+}
+
+.tableResponsive::-webkit-scrollbar {
+  height: 5px;
+}
+
+.tableResponsive::-webkit-scrollbar-thumb {
+  background-color: var(--border-color, #232838);
+  border-radius: 4px;
 }
 
 .table {
   width: 100%;
+  min-width: 520px;
   border-collapse: collapse;
   text-align: left;
 }
@@ -209,11 +265,13 @@
   font-size: 0.8125rem;
   background: rgba(0, 0, 0, 0.15);
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .table td {
   padding: 12px 14px;
   border-bottom: 1px solid var(--border-color, #232838);
+  white-space: nowrap;
 }
 
 .badge {
@@ -222,6 +280,7 @@
   font-size: 0.75rem;
   font-weight: 700;
   display: inline-block;
+  white-space: nowrap;
 }
 
 .badgePending {
@@ -254,6 +313,10 @@
   display: flex;
   flex-direction: column;
   gap: 14px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .productItem {
@@ -262,6 +325,10 @@
   gap: 12px;
   padding-bottom: 12px;
   border-bottom: 1px solid var(--border-color, #232838);
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .productItem:last-child {
@@ -269,9 +336,20 @@
   padding-bottom: 0;
 }
 
+.productImgBox {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  max-width: 44px;
+  flex-shrink: 0;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
 .productInfo {
   flex: 1;
   min-width: 0;
+  overflow: hidden;
 }
 
 .productInfo h4 {
@@ -282,12 +360,17 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  max-width: 100%;
+  display: block;
 }
 
 .productInfo p {
   margin: 0;
   font-size: 0.75rem;
   color: var(--text-muted, #94a3b8);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .productRevenue {
@@ -296,11 +379,266 @@
   color: var(--primary, #3b82f6);
   text-align: right;
   white-space: nowrap;
+  flex-shrink: 0;
+  margin-left: 8px;
 }
 
-@media (max-width: 1024px) {
+
+/* Mobile Orders List (Card layout) */
+.mobileOrderList {
+  display: none;
+}
+
+.mobileOrderCard {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-color, #232838);
+  border-radius: var(--radius-md, 8px);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: border-color 0.2s;
+}
+
+.mobileOrderCard:hover {
+  border-color: var(--primary, #3b82f6);
+}
+
+.mobileOrderTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.mobileOrderCode {
+  font-weight: 700;
+  color: var(--primary, #3b82f6);
+  font-size: 0.875rem;
+  text-decoration: none;
+}
+
+.mobileOrderMid {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8125rem;
+}
+
+.mobileCustomerName {
+  font-weight: 500;
+  color: var(--text-main, #ffffff);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mobileOrderTime {
+  color: var(--text-muted, #94a3b8);
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+.mobileOrderBottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 8px;
+  border-top: 1px dashed rgba(255, 255, 255, 0.08);
+}
+
+.mobileOrderLabel {
+  font-size: 0.75rem;
+  color: var(--text-muted, #94a3b8);
+}
+
+.mobileOrderPrice {
+  font-weight: 700;
+  color: var(--primary, #3b82f6);
+  font-size: 0.9375rem;
+}
+
+/* Responsive Breakpoints */
+@media (max-width: 1100px) {
   .chartsGrid,
   .tablesGrid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+}
+
+@media (min-width: 769px) and (max-width: 960px) {
+  .statsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .dashboard {
+    gap: 16px;
+  }
+
+  .header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .titleArea {
+    gap: 2px;
+  }
+
+  .pageTitle {
+    font-size: 1.25rem;
+  }
+
+  .pageSubtitle {
+    font-size: 0.8125rem;
+  }
+
+  .periodGroup {
+    width: 100%;
+    border-radius: 10px;
+    padding: 3px;
+    box-sizing: border-box;
+  }
+
+  .periodBtn {
+    flex: 1 0 auto;
+    padding: 7px 10px;
+    font-size: 0.75rem;
+    text-align: center;
+  }
+
+  /* 2x2 Grid for KPI Cards on Mobile & Tablet */
+  .statsGrid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  .statCard {
+    padding: 12px 10px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    border-radius: 10px;
+  }
+
+  .statIcon {
+    width: 36px;
+    height: 36px;
+    font-size: 1.15rem;
+    border-radius: 8px;
+  }
+
+  .statInfo {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .statLabel {
+    font-size: 0.75rem;
+    line-height: 1.25;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .statValue {
+    font-size: 1.15rem;
+    margin: 3px 0 2px;
+    word-break: break-word;
+  }
+
+  .trend {
+    font-size: 0.6875rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* Charts */
+  .chartsGrid {
+    gap: 14px;
+  }
+
+  .chartCard {
+    padding: 14px 12px;
+    border-radius: 10px;
+  }
+
+  .cardHeader {
+    margin-bottom: 12px;
+  }
+
+  .cardHeader h3 {
+    font-size: 0.95rem;
+  }
+
+  .chartContainer {
+    height: 250px;
+  }
+
+  /* Tables and Lists */
+  .tablesGrid {
+    gap: 14px;
+  }
+
+  .card {
+    padding: 14px 12px;
+    border-radius: 10px;
+  }
+
+  .cardHeader h3 {
+    font-size: 0.95rem;
+  }
+
+  /* Switch from wide table to sleek cards on mobile/tablet <= 768px */
+  .tableResponsive {
+    display: none;
+  }
+
+  .mobileOrderList {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .mobileOrderCard {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  .productImgBox {
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    max-width: 40px;
+  }
+
+  .productItem {
+    gap: 10px;
+    padding-bottom: 10px;
+  }
+
+  .productInfo h4 {
+    font-size: 0.8125rem;
+  }
+
+  .productRevenue {
+    font-size: 0.8125rem;
+  }
+}
+
+@media (max-width: 380px) {
+  .statsGrid {
     grid-template-columns: 1fr;
   }
 }
+
+

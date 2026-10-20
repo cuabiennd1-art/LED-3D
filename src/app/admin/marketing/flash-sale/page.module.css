@@ -1,7 +1,9 @@
 .container {
-  padding: 24px;
+  padding: 0;
+  width: 100%;
   max-width: 1320px;
   margin: 0 auto;
+  box-sizing: border-box;
   color: var(--admin-text, #f3f4f6);
 }
 
@@ -601,8 +603,943 @@ input:checked + .slider:before {
   100% { transform: scale(0.95); opacity: 0.8; }
 }
 
+/* =========================================================
+   SLOT PRODUCTS HEADER & ACTIONS
+   ========================================================= */
+.slotProductsHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.slotProductsTitleWrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.slotProductsIcon {
+  color: var(--admin-accent, #3b82f6);
+  font-size: 1.15rem;
+  flex-shrink: 0;
+}
+
+.slotProductsTitle {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--admin-text, #f3f4f6);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.slotNameHighlight {
+  color: #f97316;
+  background: rgba(249, 115, 22, 0.12);
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 0.8125rem;
+  border: 1px solid rgba(249, 115, 22, 0.25);
+  font-weight: 700;
+}
+
+.slotCountTag {
+  color: var(--admin-text-muted, #9ca3af);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.btnAddProductCompact {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--admin-accent, #3b82f6);
+  color: #fff;
+  border: none;
+  padding: 7px 14px;
+  border-radius: 8px;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  white-space: nowrap;
+}
+
+.btnAddProductCompact:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+/* Bulk Toolbar */
+.bulkToolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 8px 12px;
+  background: rgba(249, 115, 22, 0.05);
+  border: 1px solid rgba(249, 115, 22, 0.2);
+  border-radius: 8px;
+  margin-bottom: 14px;
+}
+
+.bulkLeftArea {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.bulkText {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: #f97316;
+}
+
+.bulkInputGroup {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.bulkInput {
+  width: 52px;
+  padding: 4px 6px;
+  border-radius: 6px;
+  background: var(--admin-input-bg, #1a1e2b);
+  border: 1px solid #f97316;
+  color: #fff;
+  font-weight: 800;
+  text-align: center;
+  font-size: 0.8125rem;
+  outline: none;
+}
+
+.bulkPercentSign {
+  font-weight: 700;
+  color: #f97316;
+  font-size: 0.8125rem;
+}
+
+.btnApplyBulk {
+  padding: 5px 12px;
+  border-radius: 6px;
+  background: #f97316;
+  color: #fff;
+  border: none;
+  font-weight: 700;
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition: opacity 0.2s;
+  white-space: nowrap;
+}
+
+.btnApplyBulk:hover {
+  opacity: 0.9;
+}
+
+.btnMakeLiveNow {
+  padding: 5px 12px;
+  border-radius: 6px;
+  background: rgba(59, 130, 246, 0.12);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  color: #60a5fa;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+  white-space: nowrap;
+}
+
+.btnMakeLiveNow:hover {
+  background: rgba(59, 130, 246, 0.22);
+}
+
+.emptySlotState {
+  text-align: center;
+  padding: 30px 16px;
+  color: var(--admin-text-muted, #9ca3af);
+  background: var(--admin-bg, #111318);
+  border-radius: 10px;
+  border: 1px solid var(--admin-border, #2d3343);
+  font-size: 0.875rem;
+}
+
+/* =========================================================
+   Mobile Flash Sale Product Cards View (<= 768px - ZERO horizontal scroll)
+   ========================================================= */
+.mobileFlashItemList {
+  display: none;
+}
+
+.mobileFlashCard {
+  background: var(--admin-bg, #111318);
+  border: 1px solid var(--admin-border, #2d3343);
+  border-radius: 10px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  box-sizing: border-box;
+  transition: border-color 0.2s;
+}
+
+.mobileFlashCardInactive {
+  opacity: 0.5;
+  border-style: dashed;
+}
+
+.mobileCardTop {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+}
+
+.mobileCheckbox {
+  accent-color: #f97316;
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.mobileThumb {
+  width: 40px;
+  height: 40px;
+  border-radius: 6px;
+  object-fit: cover;
+  background: var(--admin-card, #1a1d27);
+  border: 1px solid var(--admin-border, #2d3343);
+  flex-shrink: 0;
+}
+
+.mobileMetaArea {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.mobileProdTitle {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--admin-text, #f3f4f6);
+  line-height: 1.25;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: break-word;
+}
+
+.mobilePriceRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-size: 0.72rem;
+  line-height: 1.2;
+}
+
+.mobileCurrentPriceTag {
+  color: #10b981;
+  font-weight: 700;
+}
+
+.mobileOrigPriceTag {
+  text-decoration: line-through;
+  color: #9ca3af;
+  font-size: 0.6875rem;
+}
+
+.mobileStockTag {
+  color: var(--admin-text-muted, #9ca3af);
+}
+
+.mobileStockTag strong {
+  color: #f3f4f6;
+}
+
+.mobileBtnVariantToggle {
+  background: none;
+  border: none;
+  color: #60a5fa;
+  cursor: pointer;
+  padding: 0;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-decoration: underline;
+  text-align: left;
+  margin-top: 1px;
+}
+
+.btnDeleteRow {
+  background: transparent;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  color: #ef4444;
+  padding: 5px 7px;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+
+.btnDeleteRow:hover {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: #ef4444;
+}
+
+/* 3-Column Touch Action Strip */
+.mobileCardActionStrip {
+  display: grid;
+  grid-template-columns: 82px 1fr 64px;
+  gap: 6px;
+  align-items: end;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+  padding: 6px 8px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.mobileFieldCol {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.mobileFieldLabel {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--admin-text-muted, #9ca3af);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mobileInputWrap {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  background: var(--admin-input-bg, #1a1e2b);
+  border: 1px solid var(--admin-border, #2d3343);
+  border-radius: 5px;
+  padding: 2px 6px;
+  box-sizing: border-box;
+}
+
+.mobileInputWrap:focus-within {
+  border-color: #f97316;
+}
+
+.mobileFieldInput {
+  background: transparent;
+  border: none;
+  color: #f3f4f6;
+  font-size: 0.78rem;
+  font-weight: 700;
+  width: 100%;
+  outline: none;
+  padding: 2px 0;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.mobileFieldInputHighlight {
+  background: transparent;
+  border: none;
+  color: #f97316;
+  font-size: 0.8125rem;
+  font-weight: 800;
+  width: 100%;
+  outline: none;
+  padding: 2px 0;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.mobileFieldSuffix {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #f97316;
+  flex-shrink: 0;
+}
+
+.mobileFieldHint {
+  font-size: 0.625rem;
+  color: #f97316;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.mobileFieldHintPrice {
+  font-size: 0.625rem;
+  color: #10b981;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Variant Breakdown on Mobile */
+.mobileVariantBreakdown {
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px dashed var(--admin-border, #374151);
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mobileVariantTitle {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #f97316;
+  line-height: 1.35;
+}
+
+.mobileVariantGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.mobileVariantCardItem {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--admin-border, #2d3343);
+  border-radius: 6px;
+  padding: 6px 10px;
+}
+
+.mobileVariantItemName {
+  color: #e5e7eb;
+  font-weight: 600;
+  font-size: 0.78rem;
+}
+
+.mobileVariantItemPrices {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.mobileVariantOrigPrice {
+  text-decoration: line-through;
+  color: #9ca3af;
+  font-size: 0.72rem;
+}
+
+.mobileVariantSalePrice {
+  color: #10b981;
+  font-size: 0.72rem;
+}
+
+.mobileVariantFlashPrice {
+  color: #f97316;
+  font-weight: 800;
+  font-size: 0.8125rem;
+}
+
+.mobileVariantBadge {
+  background: #f97316;
+  color: #fff;
+  font-size: 0.65rem;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-weight: 700;
+}
+
+/* =========================================================
+   Comprehensive Mobile Responsiveness (<= 768px)
+   ========================================================= */
 @media (max-width: 768px) {
+  .container {
+    padding: 0;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    margin-bottom: 16px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .titleArea {
+    gap: 4px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .title {
+    font-size: 1.15rem;
+    line-height: 1.35;
+    word-break: break-word;
+  }
+
+  .subtitle {
+    font-size: 0.78rem;
+    line-height: 1.45;
+  }
+
+  .headerActions {
+    width: 100%;
+    display: flex;
+    gap: 8px;
+    box-sizing: border-box;
+  }
+
+  .btnPreviewWeb,
+  .btnSave {
+    flex: 1;
+    justify-content: center;
+    padding: 10px 8px;
+    font-size: 0.8125rem;
+    text-align: center;
+    box-sizing: border-box;
+  }
+
+  /* Status Banner */
+  .statusBanner {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 12px;
+    gap: 10px;
+    margin-bottom: 16px;
+    border-radius: 12px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .statusIndicator {
+    font-size: 0.8125rem;
+    width: 100%;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .statusText {
+    font-size: 0.8125rem;
+    line-height: 1.35;
+    word-break: break-word;
+  }
+
+  .countdownDisplay {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    box-sizing: border-box;
+    padding-top: 8px;
+    border-top: 1px dashed rgba(249, 115, 22, 0.25);
+    font-size: 0.8125rem;
+  }
+
+  .countdownTimer {
+    font-size: 0.95rem;
+    padding: 2px 8px;
+  }
+
+  /* Stats Grid: guaranteed no blowout */
+  .statsGrid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 8px;
+    margin-bottom: 16px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .statCard {
+    padding: 10px 12px;
+    border-radius: 10px;
+    min-width: 0;
+    width: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
+    gap: 4px;
+  }
+
+  .statLabel {
+    font-size: 0.7rem;
+    line-height: 1.25;
+    word-break: break-word;
+  }
+
+  .statValue {
+    font-size: 1.05rem;
+    line-height: 1.25;
+    word-break: break-word;
+  }
+
+  /* Card and Card Header */
+  .card {
+    padding: 14px 12px;
+    margin-bottom: 16px;
+    border-radius: 12px;
+    width: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
+  }
+
+  .cardHeader {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    margin-bottom: 14px;
+    padding-bottom: 10px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .cardTitle {
+    font-size: 0.95rem;
+    line-height: 1.35;
+    word-break: break-word;
+  }
+
+  /* Form Elements */
   .formGrid {
-    grid-template-columns: 1fr;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .formGroup,
+  .formGroupFull {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .input,
+  .select {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .toggleWrapper {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(255, 255, 255, 0.03);
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--admin-border, #2d3343);
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .btnAddSlot,
+  .btnAddProduct {
+    width: 100%;
+    justify-content: center;
+    padding: 10px 14px;
+    font-size: 0.8125rem;
+    box-sizing: border-box;
+  }
+
+  /* Slot Tabs Bar */
+  .slotTabsBar {
+    padding-bottom: 8px;
+    gap: 8px;
+    width: 100%;
+    box-sizing: border-box;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .slotTabsBar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .slotTab {
+    padding: 8px 12px;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  /* Slot Editor Box */
+  .slotEditorBox {
+    padding: 12px;
+    border-radius: 10px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .slotEditorHeader {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .slotEditorTitle {
+    font-size: 0.9rem;
+    word-break: break-word;
+  }
+
+  .slotEditorActions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .btnDeleteSlot {
+    width: 100%;
+    justify-content: center;
+    padding: 8px 12px;
+    box-sizing: border-box;
+  }
+
+  .slotFormGrid {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  /* Slot Products Header on Mobile */
+  .slotProductsHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .slotProductsTitleWrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+    min-width: 0;
+    flex-wrap: wrap;
+  }
+
+  .slotProductsTitle {
+    font-size: 0.8125rem;
+    line-height: 1.3;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+
+  .slotNameHighlight {
+    font-size: 0.72rem;
+    padding: 1px 6px;
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .slotCountTag {
+    font-size: 0.72rem;
+  }
+
+  .btnAddProductCompact {
+    padding: 6px 10px;
+    font-size: 0.75rem;
+    flex-shrink: 0;
+  }
+
+  /* Bulk Toolbar */
+  .bulkToolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    padding: 8px 10px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .bulkLeftArea {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .bulkText {
+    font-size: 0.75rem;
+    white-space: nowrap;
+  }
+
+  .bulkInputGroup {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .bulkInput {
+    width: 44px;
+    padding: 3px 4px;
+    font-size: 0.78rem;
+  }
+
+  .btnApplyBulk {
+    padding: 4px 8px;
+    font-size: 0.72rem;
+  }
+
+  .btnMakeLiveNow {
+    width: 100%;
+    text-align: center;
+    padding: 5px 8px;
+    font-size: 0.72rem;
+    box-sizing: border-box;
+  }
+
+  /* Switch Table to Cards */
+  .tableResponsive {
+    display: none !important;
+  }
+
+  .mobileFlashItemList {
+    display: flex !important;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .mobileFlashCard {
+    padding: 9px 10px;
+    border-radius: 8px;
+    width: 100%;
+    box-sizing: border-box;
+    min-width: 0;
+    overflow: hidden;
+    gap: 6px;
+  }
+
+  .mobileCardTop {
+    gap: 8px;
+    min-width: 0;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .mobileThumb {
+    width: 38px;
+    height: 38px;
+    flex-shrink: 0;
+  }
+
+  .mobileMetaArea {
+    min-width: 0;
+    flex: 1;
+    gap: 2px;
+  }
+
+  .mobileProdTitle {
+    font-size: 0.78rem;
+    line-height: 1.25;
+    word-break: break-word;
+  }
+
+  .mobilePriceRow {
+    gap: 5px;
+    font-size: 0.7rem;
+  }
+
+  .mobileCardActionStrip {
+    grid-template-columns: 80px 1fr 58px;
+    gap: 5px;
+    padding: 5px 6px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .mobileFieldLabel {
+    font-size: 0.625rem;
+  }
+
+  .mobileFieldInput {
+    font-size: 0.75rem;
+    padding: 2px 0;
+  }
+
+  .mobileFieldInputHighlight {
+    font-size: 0.78rem;
+    padding: 2px 0;
+  }
+
+  .mobileFieldHint,
+  .mobileFieldHintPrice {
+    font-size: 0.6rem;
+  }
+
+  /* FOMO Settings */
+  .fomoGrid {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .fomoOption {
+    padding: 12px;
+    border-radius: 10px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .fomoOptionHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .fomoOptionTitle {
+    font-size: 0.85rem;
+    font-weight: 700;
+    line-height: 1.3;
+  }
+
+  .fomoOptionDesc {
+    font-size: 0.78rem;
+    line-height: 1.4;
   }
 }
+
