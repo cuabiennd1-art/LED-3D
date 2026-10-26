@@ -7,6 +7,7 @@ import { FiArrowLeft, FiUploadCloud, FiTrash2, FiPlus } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import AdminLoading from '@/components/admin/AdminLoading';
 import { apiFetch } from '@/lib/api';
+import { uploadMedia } from '@/lib/upload-client';
 import ProductDescriptionEditor from '@/components/admin/ProductDescriptionEditor';
 import styles from '../../new/page.module.css';
 
@@ -100,23 +101,19 @@ export default function EditProductPage() {
     try {
       const uploadedUrls: string[] = [];
       for (let i = 0; i < files.length; i++) {
-        const formData = new FormData();
-        formData.append('file', files[i]);
-        const res = await apiFetch('/api/upload', { method: 'POST', body: formData });
-        if (res.status === 413) {
-          toast.error(`Ảnh ${files[i].name} vượt quá 4.5MB giới hạn của Vercel`);
-          continue;
-        }
-        let data: any = null;
         try {
-          data = await res.json();
-        } catch {}
-        if (data?.success && data.data?.url) {
-          uploadedUrls.push(data.data.url);
+          const res = await uploadMedia(files[i]);
+          if (res.success && res.url) {
+            uploadedUrls.push(res.url);
+          }
+        } catch (uploadErr: any) {
+          toast.error(`Ảnh ${files[i].name} tải lên thất bại: ${uploadErr.message || 'Lỗi mạng'}`);
         }
       }
       setForm((prev) => ({ ...prev, images: [...prev.images, ...uploadedUrls] }));
-      toast.success('Đã tải ảnh lên thành công');
+      if (uploadedUrls.length > 0) {
+        toast.success(`Đã tải lên ${uploadedUrls.length} ảnh thành công`);
+      }
     } catch (err) {
       toast.error('Lỗi khi tải ảnh');
     } finally {

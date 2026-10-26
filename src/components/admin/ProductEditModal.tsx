@@ -18,6 +18,7 @@ import toast from 'react-hot-toast';
 import LazyImage from '@/components/common/LazyImage';
 import Skeleton from '@/components/common/Skeleton';
 import { apiFetch } from '@/lib/api';
+import { uploadMedia } from '@/lib/upload-client';
 import { isVideoUrl } from '@/lib/utils';
 import {
   IProductOption,
@@ -81,6 +82,8 @@ export default function ProductEditModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isUploadingVideo, setIsUploadingVideo] = useState(false);
+  const [uploadImageStatus, setUploadImageStatus] = useState('');
+  const [uploadVideoStatus, setUploadVideoStatus] = useState('');
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -234,67 +237,61 @@ export default function ProductEditModal({
     setNewImageUrl('');
   };
 
-  // Upload image to /api/upload
+  // Upload image via uploadMedia (Bypass Vercel 4.5MB limit)
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const data = new FormData();
-    data.append('file', file);
-
     setIsUploading(true);
+    setUploadImageStatus('Đang tải ảnh...');
     try {
-      const res = await apiFetch('/api/upload', {
-        method: 'POST',
-        body: data,
+      const res = await uploadMedia(file, {
+        onProgress: (p) => setUploadImageStatus(p.message),
       });
-      const resData = await res.json();
-      if (resData.success && resData.data?.url) {
-        setImages((prev) => [...prev, resData.data.url]);
+      if (res.success && res.url) {
+        setImages((prev) => [...prev, res.url]);
         toast.success('Tải ảnh lên thành công!');
       } else {
-        toast.error(resData.message || 'Lỗi tải ảnh lên');
+        toast.error(res.message || 'Lỗi tải ảnh lên');
       }
-    } catch (err) {
-      toast.error('Lỗi khi tải file ảnh');
+    } catch (err: any) {
+      toast.error(err.message || 'Lỗi khi tải file ảnh');
     } finally {
       setIsUploading(false);
+      setUploadImageStatus('');
       if (e.target) e.target.value = '';
     }
   };
 
-  // Upload video to /api/upload
+  // Upload video via uploadMedia (Chunked GridFS / Cloudinary - Bypass Vercel 4.5MB limit)
   const handleVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 100 * 1024 * 1024) {
-      toast.error('Kích thước video không được vượt quá 100MB');
+    if (file.size > 200 * 1024 * 1024) {
+      toast.error('Kích thước video không được vượt quá 200MB');
       return;
     }
 
-    const data = new FormData();
-    data.append('file', file);
-
     setIsUploadingVideo(true);
+    setUploadVideoStatus('Đang chuẩn bị video...');
     try {
-      const res = await apiFetch('/api/upload', {
-        method: 'POST',
-        body: data,
+      const res = await uploadMedia(file, {
+        onProgress: (p) => setUploadVideoStatus(p.message),
       });
-      const resData = await res.json();
-      if (resData.success && resData.data?.url) {
-        const vidUrl = resData.data.url;
+      if (res.success && res.url) {
+        const vidUrl = res.url;
         setImages((prev) => [...prev, vidUrl]);
         setVideo(vidUrl);
         toast.success('Tải video lên thành công!');
       } else {
-        toast.error(resData.message || 'Lỗi tải video lên');
+        toast.error(res.message || 'Lỗi tải video lên');
       }
-    } catch (err) {
-      toast.error('Lỗi khi tải file video');
+    } catch (err: any) {
+      toast.error(err.message || 'Lỗi khi tải file video');
     } finally {
       setIsUploadingVideo(false);
+      setUploadVideoStatus('');
       if (e.target) e.target.value = '';
     }
   };
@@ -741,16 +738,16 @@ export default function ProductEditModal({
                     onClick={() => fileInputRef.current?.click()}
                     disabled={isUploading || isUploadingVideo}
                   >
-                    <FiUploadCloud /> {isUploading ? 'Đang tải...' : 'Upload ảnh'}
+                    <FiUploadCloud /> {isUploading ? (uploadImageStatus || 'Đang tải...') : 'Upload ảnh'}
                   </button>
                   <button
                     type="button"
                     className={styles.uploadVideoBtn}
                     onClick={() => videoInputRef.current?.click()}
                     disabled={isUploading || isUploadingVideo}
-                    title="Tải video MP4/WebM từ thiết bị"
+                    title="Tải video MP4/WebM từ thiết bị (Hỗ trợ file lớn lên tới 200MB)"
                   >
-                    <FiVideo /> {isUploadingVideo ? 'Đang tải video...' : 'Upload video'}
+                    <FiVideo /> {isUploadingVideo ? (uploadVideoStatus || 'Đang tải video...') : 'Upload video'}
                   </button>
                   <input
                     type="file"

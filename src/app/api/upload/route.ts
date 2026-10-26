@@ -22,6 +22,25 @@ export async function OPTIONS() {
   });
 }
 
+export async function GET() {
+  return NextResponse.json(
+    {
+      success: true,
+      data: {
+        maxDirectSize: 4 * 1024 * 1024, // 4MB safe limit for direct upload on Vercel
+        chunkSize: 2 * 1024 * 1024, // 2MB chunk size for chunked upload
+        supportsChunked: true,
+        cloudinary: {
+          enabled: !!(process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_UPLOAD_PRESET),
+          cloudName: process.env.CLOUDINARY_CLOUD_NAME || null,
+          uploadPreset: process.env.CLOUDINARY_UPLOAD_PRESET || null,
+        },
+      },
+    },
+    { headers: corsHeaders }
+  );
+}
+
 export async function POST(request: Request) {
   try {
     const formData = await request.formData();

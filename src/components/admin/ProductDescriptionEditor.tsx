@@ -31,6 +31,7 @@ import {
 } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import { apiFetch } from '@/lib/api';
+import { uploadMedia } from '@/lib/upload-client';
 import styles from './ProductDescriptionEditor.module.css';
 
 interface ProductDescriptionEditorProps {
@@ -744,7 +745,7 @@ export default function ProductDescriptionEditor({
     insertHtmlAtCursorOrBottom(videoHtml);
   };
 
-  // Upload image files via /api/upload
+  // Upload image files via uploadMedia (Bypass Vercel 4.5MB limit)
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
@@ -754,23 +755,16 @@ export default function ProductDescriptionEditor({
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
-      setUploadStatus(`Đang tải ảnh ${i + 1}/${files.length}...`);
-
       try {
-        const formData = new FormData();
-        formData.append('file', file);
-
-        const res = await apiFetch('/api/upload', {
-          method: 'POST',
-          body: formData,
+        const result = await uploadMedia(file, {
+          onProgress: (p) => setUploadStatus(`[${i + 1}/${files.length}] ${p.message}`),
         });
 
-        const data = await res.json();
-        if (data.success && data.data?.url) {
-          insertImageElement(data.data.url, file.name.replace(/\.[^/.]+$/, ''));
+        if (result.success && result.url) {
+          insertImageElement(result.url, file.name.replace(/\.[^/.]+$/, ''));
           successCount++;
         } else {
-          toast.error(data.message || `Lỗi khi tải ảnh ${file.name}`);
+          toast.error(result.message || `Lỗi khi tải ảnh ${file.name}`);
         }
       } catch (err: any) {
         toast.error(`Không thể upload ảnh ${file.name}: ${err.message || 'Lỗi mạng'}`);
@@ -786,7 +780,7 @@ export default function ProductDescriptionEditor({
     }
   };
 
-  // Upload video files via /api/upload (Saved directly into MongoDB Atlas)
+  // Upload video files via uploadMedia (Chunked GridFS / Cloudinary - Bypass Vercel 4.5MB limit)
   const handleVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
@@ -796,48 +790,16 @@ export default function ProductDescriptionEditor({
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
-      const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
-
-      // Cảnh báo giới hạn payload 4.5 MB của Vercel Serverless
-      if (file.size > 4.5 * 1024 * 1024) {
-        toast.error(
-          `Video "${file.name}" (${sizeMb} MB) vượt quá giới hạn 4.5 MB của Vercel Serverless. Vui lòng nén video dưới 4.5 MB hoặc bấm "Link Ảnh/Video" để dán link YouTube/TikTok!`,
-          { duration: 7000 }
-        );
-        continue;
-      }
-
-      setUploadStatus(`Đang tải video "${file.name}" (${sizeMb} MB) lưu vào CSDL MongoDB...`);
-
       try {
-        const formData = new FormData();
-        formData.append('file', file);
-
-        const res = await apiFetch('/api/upload', {
-          method: 'POST',
-          body: formData,
+        const result = await uploadMedia(file, {
+          onProgress: (p) => setUploadStatus(`[${i + 1}/${files.length}] ${p.message}`),
         });
 
-        if (res.status === 413) {
-          toast.error(
-            `Lỗi 413: Video (${sizeMb} MB) vượt quá giới hạn 4.5 MB của Vercel. Vui lòng nén video hoặc dùng link YouTube / TikTok!`,
-            { duration: 7000 }
-          );
-          continue;
-        }
-
-        let data: any = null;
-        try {
-          data = await res.json();
-        } catch (parseErr) {
-          // Res is not JSON (e.g. HTML error from proxy)
-        }
-
-        if (data && data.success && data.data?.url) {
-          insertVideoElement(data.data.url, false);
+        if (result.success && result.url) {
+          insertVideoElement(result.url, false);
           successCount++;
         } else {
-          toast.error(data?.message || `Lỗi khi tải video ${file.name} (Mã lỗi HTTP ${res.status})`);
+          toast.error(result.message || `Lỗi khi tải video ${file.name}`);
         }
       } catch (err: any) {
         toast.error(`Không thể upload video ${file.name}: ${err.message || 'Lỗi mạng'}`);
@@ -975,21 +937,17 @@ export default function ProductDescriptionEditor({
           setUploadStatus('Đang tải ảnh dán từ clipboard...');
 
           try {
-            const formData = new FormData();
-            formData.append('file', file);
-            const res = await apiFetch('/api/upload', {
-              method: 'POST',
-              body: formData,
+            const result = await uploadMedia(file, {
+              onProgress: (p) => setUploadStatus(p.message),
             });
-            const data = await res.json();
-            if (data.success && data.data?.url) {
-              insertImageElement(data.data.url, 'Ảnh dán từ clipboard');
+            if (result.success && result.url) {
+              insertImageElement(result.url, 'Ảnh dán từ clipboard');
               toast.success('Đã chèn ảnh từ clipboard vào vị trí con trỏ!');
             } else {
-              toast.error(data.message || 'Không thể upload ảnh từ clipboard');
+              toast.error(result.message || 'Không thể upload ảnh từ clipboard');
             }
-          } catch (err) {
-            toast.error('Lỗi khi tải ảnh từ clipboard');
+          } catch (err: any) {
+            toast.error(`Lỗi khi tải ảnh từ clipboard: ${err.message || 'Lỗi mạng'}`);
           } finally {
             setIsUploading(false);
             setUploadStatus('');
@@ -1002,24 +960,20 @@ export default function ProductDescriptionEditor({
           e.preventDefault();
           saveSelection();
           setIsUploading(true);
-          setUploadStatus('Đang tải video dán từ clipboard lưu vào CSDL MongoDB...');
+          setUploadStatus('Đang tải video dán từ clipboard...');
 
           try {
-            const formData = new FormData();
-            formData.append('file', file);
-            const res = await apiFetch('/api/upload', {
-              method: 'POST',
-              body: formData,
+            const result = await uploadMedia(file, {
+              onProgress: (p) => setUploadStatus(p.message),
             });
-            const data = await res.json();
-            if (data.success && data.data?.url) {
-              insertVideoElement(data.data.url, false);
-              toast.success('Đã lưu video vào CSDL MongoDB và chèn vào vị trí con trỏ!');
+            if (result.success && result.url) {
+              insertVideoElement(result.url, false);
+              toast.success('Đã chèn video từ clipboard vào vị trí con trỏ!');
             } else {
-              toast.error(data.message || 'Không thể upload video từ clipboard');
+              toast.error(result.message || 'Không thể upload video từ clipboard');
             }
-          } catch (err) {
-            toast.error('Lỗi khi tải video từ clipboard');
+          } catch (err: any) {
+            toast.error(`Lỗi khi tải video từ clipboard: ${err.message || 'Lỗi mạng'}`);
           } finally {
             setIsUploading(false);
             setUploadStatus('');

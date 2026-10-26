@@ -26,6 +26,7 @@ import {
 import toast from 'react-hot-toast';
 import { useTheme, ThemeConfig, BannerSlide, defaultTheme, defaultBanners, defaultSubBanners } from '@/contexts/ThemeContext';
 import { apiFetch } from '@/lib/api';
+import { uploadMedia } from '@/lib/upload-client';
 import styles from './page.module.css';
 
 // Preset Themes for 1-click styling
@@ -438,32 +439,25 @@ export default function AdminSettingsPage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const formData = new FormData();
-    formData.append('file', file);
-
     setIsUploading(true);
     try {
-      const res = await apiFetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-      });
-      const data = await res.json();
-      if (data.success && data.data?.url) {
+      const res = await uploadMedia(file);
+      if (res.success && res.url) {
         const updated: ThemeConfig = {
           ...theme,
           pageTitles: {
             ...theme.pageTitles,
-            logoUrl: data.data.url,
+            logoUrl: res.url,
           },
         };
         setTheme(updated);
         applyCSSVariables(updated);
         toast.success('Upload Logo thành công! Hãy bấm "Lưu Cấu Hình" để lưu lại.');
       } else {
-        toast.error(data.message || 'Lỗi upload ảnh logo');
+        toast.error(res.message || 'Lỗi upload ảnh logo');
       }
-    } catch (err) {
-      toast.error('Lỗi khi tải ảnh logo lên');
+    } catch (err: any) {
+      toast.error(`Lỗi khi tải ảnh logo lên: ${err.message || 'Lỗi mạng'}`);
     } finally {
       setIsUploading(false);
     }
@@ -474,32 +468,25 @@ export default function AdminSettingsPage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const formData = new FormData();
-    formData.append('file', file);
-
     setIsUploadingFavicon(true);
     try {
-      const res = await apiFetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-      });
-      const data = await res.json();
-      if (data.success && data.data?.url) {
+      const res = await uploadMedia(file);
+      if (res.success && res.url) {
         const updated: ThemeConfig = {
           ...theme,
           pageTitles: {
             ...theme.pageTitles,
-            faviconUrl: data.data.url,
+            faviconUrl: res.url,
           },
         };
         setTheme(updated);
         applyCSSVariables(updated);
         toast.success('Upload Favicon thành công! Hãy bấm "Lưu Cấu Hình" để lưu lại.');
       } else {
-        toast.error(data.message || 'Lỗi upload favicon');
+        toast.error(res.message || 'Lỗi upload favicon');
       }
-    } catch (err) {
-      toast.error('Lỗi khi tải favicon lên');
+    } catch (err: any) {
+      toast.error(`Lỗi khi tải favicon lên: ${err.message || 'Lỗi mạng'}`);
     } finally {
       setIsUploadingFavicon(false);
     }
@@ -550,24 +537,17 @@ export default function AdminSettingsPage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const formData = new FormData();
-    formData.append('file', file);
-
     setUploadingBannerIdx(index);
     try {
-      const res = await apiFetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-      });
-      const data = await res.json();
-      if (data.success && data.data?.url) {
-        handleBannerChange(index, 'image', data.data.url);
+      const res = await uploadMedia(file);
+      if (res.success && res.url) {
+        handleBannerChange(index, 'image', res.url);
         toast.success(`Upload ảnh banner #${index + 1} thành công!`);
       } else {
-        toast.error(data.message || 'Lỗi upload ảnh banner');
+        toast.error(res.message || 'Lỗi upload ảnh banner');
       }
-    } catch (err) {
-      toast.error('Lỗi khi tải ảnh banner lên');
+    } catch (err: any) {
+      toast.error(`Lỗi khi tải ảnh banner lên: ${err.message || 'Lỗi mạng'}`);
     } finally {
       setUploadingBannerIdx(null);
     }
@@ -617,24 +597,17 @@ export default function AdminSettingsPage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const formData = new FormData();
-    formData.append('file', file);
-
     setUploadingSubBannerIdx(index);
     try {
-      const res = await apiFetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-      });
-      const data = await res.json();
-      if (data.success && data.data?.url) {
-        handleSubBannerChange(index, 'image', data.data.url);
+      const res = await uploadMedia(file);
+      if (res.success && res.url) {
+        handleSubBannerChange(index, 'image', res.url);
         toast.success(`Upload ảnh Banner Phụ #${index + 1} thành công!`);
       } else {
-        toast.error(data.message || 'Lỗi upload ảnh banner phụ');
+        toast.error(res.message || 'Lỗi upload ảnh banner phụ');
       }
-    } catch (err) {
-      toast.error('Lỗi khi tải ảnh banner phụ lên');
+    } catch (err: any) {
+      toast.error(`Lỗi khi tải ảnh banner phụ lên: ${err.message || 'Lỗi mạng'}`);
     } finally {
       setUploadingSubBannerIdx(null);
     }
