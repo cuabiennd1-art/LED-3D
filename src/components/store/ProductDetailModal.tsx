@@ -44,8 +44,8 @@ export default function ProductDetailModal({
   const router = useRouter();
   const { addToCart, buyNow } = useCart();
 
-  const [selectedAttributes, setSelectedAttributes] = useState<Record<string, string>>({});
-  const [quantity, setQuantity] = useState(1);
+  const [selectedAttributes, setSelectedAttributes] = useState<Record<string, string>>(() => (initialAttributes ? { ...initialAttributes } : {}));
+  const [quantity, setQuantity] = useState(initialQuantity && initialQuantity > 0 ? initialQuantity : 1);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
 
@@ -120,16 +120,16 @@ export default function ProductDetailModal({
 
   useEffect(() => {
     const pId = product?._id ? String(product._id) : (product?.slug || null);
-    if (pId && pId !== currentProductIdRef.current) {
-      currentProductIdRef.current = pId;
-      setQuantity(initialQuantity && initialQuantity > 0 ? initialQuantity : 1);
-      setActiveImageIndex(0);
-
-      const initialSelection: Record<string, string> = {};
-      if (initialAttributes && Object.keys(initialAttributes).length > 0) {
-        Object.assign(initialSelection, initialAttributes);
+    if (pId) {
+      if (pId !== currentProductIdRef.current) {
+        currentProductIdRef.current = pId;
+        setActiveImageIndex(0);
       }
-      setSelectedAttributes(initialSelection);
+      setQuantity(initialQuantity && initialQuantity > 0 ? initialQuantity : 1);
+
+      if (initialAttributes && Object.keys(initialAttributes).length > 0) {
+        setSelectedAttributes({ ...initialAttributes });
+      }
     }
   }, [product?._id, product?.slug, initialAttributes, initialQuantity]);
 
